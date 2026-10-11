@@ -98,13 +98,68 @@ suite('Workspace .env files', () => {
     await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
   });
 
+  test('creates a .env file (with folders) and opens it', async () => {
+    const a = await api();
+    const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+    assert.ok(folder);
+    try {
+      const created = await vscode.commands.executeCommand<vscode.Uri | undefined>(
+        'dotenvManager.createEnvFile',
+        folder,
+        'new-app/config/.env.local',
+      );
+      assert.ok(created && fs.existsSync(created.fsPath));
+      assert.strictEqual(fs.readFileSync(created.fsPath, 'utf8'), '');
+      const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+      assert.ok(
+        (input instanceof vscode.TabInputCustom || input instanceof vscode.TabInputText) && input.uri.fsPath === created.fsPath,
+      );
+      const listed = await waitFor(() => relativePaths(a), (p) => p.includes('new-app/config/.env.local'));
+      assert.ok(listed.includes('new-app/config/.env.local'), `got ${listed.join(', ')}`);
+    } finally {
+      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
+      fs.rmSync(path.join(root(), 'new-app'), { recursive: true, force: true });
+    }
+    await waitFor(() => relativePaths(a), (p) => p.length === 2);
+  });
+
+  test('never overwrites an existing file and rejects invalid names', async () => {
+    const folder = vscode.workspace.workspaceFolders?.[0]?.uri;
+    const before = fs.readFileSync(path.join(root(), 'sample.env'), 'utf8');
+    assert.strictEqual(await vscode.commands.executeCommand('dotenvManager.createEnvFile', folder, 'sample.env'), undefined);
+    assert.strictEqual(await vscode.commands.executeCommand('dotenvManager.createEnvFile', folder, '../escape/.env'), undefined);
+    assert.strictEqual(await vscode.commands.executeCommand('dotenvManager.createEnvFile', folder, 'notes.txt'), undefined);
+    assert.strictEqual(fs.readFileSync(path.join(root(), 'sample.env'), 'utf8'), before);
+    assert.ok(!fs.existsSync(path.join(root(), '..', 'escape')));
+    assert.ok(!fs.existsSync(path.join(root(), 'notes.txt')));
+  });
+
+  test('dotenvManager.exclude replaces the default excludes', async () => {
+    const a = await api();
+    const config = vscode.workspace.getConfiguration('dotenvManager');
+    try {
+      await config.update('exclude', ['apps'], vscode.ConfigurationTarget.Global);
+      const changed = await waitFor(
+        () => relativePaths(a),
+        (p) => p.join() === ['sample.env', 'vendor/lib/.env'].join(),
+      );
+      assert.deepStrictEqual(changed, ['sample.env', 'vendor/lib/.env']);
+    } finally {
+      await config.update('exclude', undefined, vscode.ConfigurationTarget.Global);
+    }
+    assert.deepStrictEqual(
+      await waitFor(() => relativePaths(a), (p) => p.join() === ['sample.env', 'apps/api/.env.local'].join()),
+      ['sample.env', 'apps/api/.env.local'],
+    );
+  });
+
   test('contributes the status bar setting, selector command and Explorer view', async () => {
     const pkg = vscode.extensions.getExtension('zakout.dotenv-manager')?.packageJSON;
     assert.ok(pkg.activationEvents.includes('onStartupFinished'));
     assert.strictEqual(pkg.contributes.configuration.properties['dotenvManager.statusBar.enabled'].default, true);
     assert.ok(pkg.contributes.views.explorer.some((v: { id: string }) => v.id === 'dotenvManager.files'));
     const commands = await vscode.commands.getCommands(true);
-    for (const id of ['dotenvManager.selectEnvFile', 'dotenvManager.refreshEnvFiles']) {
+    for (const id of ['dotenvManager.selectEnvFile', 'dotenvManager.refreshEnvFiles', 'dotenvManager.createEnvFile']) {
       assert.ok(commands.includes(id), id);
     }
   });

@@ -6,7 +6,13 @@ import type { EnvFileIndex } from './envFileIndex';
 
 interface FileItem extends vscode.QuickPickItem {
   uri?: string;
+  create?: true;
 }
+
+const CREATE_ITEMS: FileItem[] = [
+  { label: '', kind: vscode.QuickPickItemKind.Separator },
+  { label: '$(add) Create .env file…', create: true, alwaysShow: true },
+];
 
 const OPEN_AS_TEXT: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('go-to-file'), tooltip: 'Open as Text' };
 const OPEN_VISUAL: vscode.QuickInputButton = { iconPath: new vscode.ThemeIcon('symbol-variable'), tooltip: 'Open with Dotenv Manager' };
@@ -42,8 +48,8 @@ export async function selectEnvFile(index: EnvFileIndex): Promise<void> {
   picker.busy = !index.ready;
   picker.placeholder = 'Searching for .env files…';
 
-  const build = (counts?: Map<string, number>): FileItem[] =>
-    pickerEntries(index.list(), activeEnvUri()?.toString(), (vscode.workspace.workspaceFolders?.length ?? 0) > 1).map(
+  const build = (counts?: Map<string, number>): FileItem[] => [
+    ...pickerEntries(index.list(), activeEnvUri()?.toString(), (vscode.workspace.workspaceFolders?.length ?? 0) > 1).map(
       (entry): FileItem =>
         entry.kind === 'separator'
           ? { label: entry.label, kind: vscode.QuickPickItemKind.Separator }
@@ -56,7 +62,9 @@ export async function selectEnvFile(index: EnvFileIndex): Promise<void> {
               uri: entry.uri,
               buttons: [OPEN_AS_TEXT, OPEN_VISUAL],
             },
-    );
+    ),
+    ...CREATE_ITEMS,
+  ];
 
   let disposed = false;
   let counts: Map<string, number> | undefined;
@@ -96,6 +104,11 @@ export async function selectEnvFile(index: EnvFileIndex): Promise<void> {
   };
 
   picker.onDidAccept(() => {
+    if (picker.selectedItems[0]?.create) {
+      picker.hide();
+      void vscode.commands.executeCommand('dotenvManager.createEnvFile');
+      return;
+    }
     const uri = picker.selectedItems[0]?.uri;
     if (uri) {
       void open(uri);

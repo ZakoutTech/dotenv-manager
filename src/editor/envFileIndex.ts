@@ -2,15 +2,16 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { sortEnvFiles, type EnvFile } from '../core/envFileList';
 import { isEnvFileName } from '../shared/envFiles';
+import { createExcludeMatcher, DEFAULT_EXCLUDES, findFilesExclude } from '../shared/excludes';
 
 const INCLUDE = '**/{.env,.env.*,*.env}';
-const EXCLUDED_DIRS = ['node_modules', '.git', 'dist', 'out', 'build', '.next', 'coverage', 'vendor'];
-const EXCLUDE = `**/{${EXCLUDED_DIRS.join(',')}}/**`;
 export const MAX_FILES = 1000;
 const NEW_FOLDER_DELAY_MS = 500;
 
-const isExcluded = (relativePath: string): boolean =>
-  relativePath.split('/').some((segment) => EXCLUDED_DIRS.includes(segment));
+function excludePatterns(): string[] {
+  const value = vscode.workspace.getConfiguration('dotenvManager').get<unknown>('exclude', DEFAULT_EXCLUDES);
+  return Array.isArray(value) ? value.filter((p): p is string => typeof p === 'string') : DEFAULT_EXCLUDES;
+}
 
 type Change = { op: 'add'; file: EnvFile } | { op: 'remove'; uri: string };
 
@@ -26,6 +27,8 @@ export class EnvFileIndex implements vscode.Disposable {
   private changesDuringScan: Change[] | undefined;
   private newFolders = new Set<string>();
   private newFolderTimer: ReturnType<typeof setTimeout> | undefined;
+  private isExcluded = createExcludeMatcher(excludePatterns());
+  private findExclude = findFilesExclude(excludePatterns());
   private readonly changed = new vscode.EventEmitter<void>();
   private readonly disposables: vscode.Disposable[] = [this.changed];
 
@@ -40,6 +43,13 @@ export class EnvFileIndex implements vscode.Disposable {
       watcher.onDidCreate((uri) => void this.created(uri)),
       watcher.onDidDelete((uri) => this.apply({ op: 'remove', uri: uri.toString() })),
       vscode.workspace.onDidChangeWorkspaceFolders(() => void this.rescan()),
+      vscode.workspace.onDidChangeConfiguration((e) => {
+        if (e.affectsConfiguration('dotenvManager.exclude')) {
+          this.isExcluded = createExcludeMatcher(excludePatterns());
+          this.findExclude = findFilesExclude(excludePatterns());
+          void this.rescan();
+        }
+      }),
       { dispose: () => clearTimeout(this.newFolderTimer) },
     );
     void this.rescan();
@@ -68,7 +78,8 @@ export class EnvFileIndex implements vscode.Disposable {
     const generation = ++this.generation;
     this.changesDuringScan = [];
     const scan = (async () => {
-      const uris = await vscode.workspace.findFiles(INCLUDE, EXCLUDE, MAX_FILES);
+      // An explicit exclude (even an empty one) replaces files.exclude, like the setting's defaults intend.
+      const uris = await vscode.workspace.findFiles(INCLUDE, this.findExclude ?? null, MAX_FILES);
       if (generation !== this.generation) {
         return; // A newer scan started; its result wins.
       }
@@ -101,7 +112,7 @@ export class EnvFileIndex implements vscode.Disposable {
 
   private async created(uri: vscode.Uri): Promise<void> {
     const relativePath = this.relativePath(uri);
-    if (relativePath === undefined || isExcluded(relativePath)) {
+    if (relativePath === undefined || this.isExcluded(relativePath)) {
       return;
     }
     const file = this.toEnvFile(uri);
@@ -128,7 +139,11 @@ export class EnvFileIndex implements vscode.Disposable {
     // Skip folders nested in another new folder: the outer search covers them.
     const roots = folders.filter((f, i) => !folders.slice(0, i).some((outer) => f.startsWith(`${outer}/`)));
     for (const root of roots) {
-      const uris = await vscode.workspace.findFiles(new vscode.RelativePattern(vscode.Uri.parse(root), INCLUDE), EXCLUDE, MAX_FILES);
+      const uris = await vscode.workspace.findFiles(
+        new vscode.RelativePattern(vscode.Uri.parse(root), INCLUDE),
+        this.findExclude ?? null,
+        MAX_FILES,
+      );
       for (const uri of uris) {
         const file = this.toEnvFile(uri);
         if (file) {
@@ -149,7 +164,7 @@ export class EnvFileIndex implements vscode.Disposable {
       return undefined;
     }
     const relativePath = path.posix.relative(folder.uri.path, uri.path);
-    if (isExcluded(relativePath)) {
+    if (this.isExcluded(relativePath)) {
       return undefined;
     }
     return { uri: uri.toString(), folder: folder.name, folderIndex: folder.index, relativePath };

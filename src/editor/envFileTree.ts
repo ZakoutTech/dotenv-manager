@@ -38,6 +38,7 @@ export class EnvFileTreeProvider implements vscode.TreeDataProvider<EnvTreeNode>
     if (node.kind === 'folder') {
       const item = new vscode.TreeItem(node.name, vscode.TreeItemCollapsibleState.Expanded);
       item.iconPath = new vscode.ThemeIcon('root-folder');
+      item.contextValue = 'dotenvManager.folder';
       return item;
     }
     const uri = vscode.Uri.parse(node.uri);

@@ -60,6 +60,22 @@
           "order": 0,
           "markdownDescription": "Editor used when you open a `.env`, `.env.*` or `*.env` file. Dotenv Manager keeps the matching `#workbench.editorAssociations#` entries in sync with this choice. You can always switch with **Open as Text** / **Open with Dotenv Manager**."
         },
+        "dotenvManager.exclude": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [
+            "**/node_modules",
+            "**/.git",
+            "**/dist",
+            "**/out",
+            "**/build",
+            "**/.next",
+            "**/coverage",
+            "**/vendor"
+          ],
+          "order": 2,
+          "markdownDescription": "Glob patterns (relative to the workspace folder) for folders and files that are not searched for `.env` files. A pattern without `/` matches that name at any depth (`vendor` is the same as `**/vendor`). Supports `**`, `*`, `?`, `{a,b}` and `[abc]`."
+        },
         "dotenvManager.statusBar.enabled": {
           "type": "boolean",
           "default": true,
@@ -81,7 +97,7 @@
     "viewsWelcome": [
       {
         "view": "dotenvManager.files",
-        "contents": "No .env files found in this workspace.\n[Search again](command:dotenvManager.refreshEnvFiles)"
+        "contents": "No .env files found in this workspace.\n[Create .env File](command:dotenvManager.createEnvFile)\n[Search again](command:dotenvManager.refreshEnvFiles)"
       }
     ],
     "commands": [
@@ -112,6 +128,12 @@
         "icon": "$(list-selection)"
       },
       {
+        "command": "dotenvManager.createEnvFile",
+        "title": "Create .env File…",
+        "category": "Dotenv Manager",
+        "icon": "$(new-file)"
+      },
+      {
         "command": "dotenvManager.refreshEnvFiles",
         "title": "Refresh .env Files",
         "category": "Dotenv Manager",
@@ -140,6 +162,11 @@
       ],
       "view/title": [
         {
+          "command": "dotenvManager.createEnvFile",
+          "when": "view == dotenvManager.files",
+          "group": "navigation@0"
+        },
+        {
           "command": "dotenvManager.selectEnvFile",
           "when": "view == dotenvManager.files",
           "group": "navigation@1"
@@ -151,6 +178,11 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "dotenvManager.createEnvFile",
+          "when": "view == dotenvManager.files && viewItem == dotenvManager.folder",
+          "group": "inline"
+        },
         {
           "command": "dotenvManager.openEditor",
           "when": "view == dotenvManager.files && viewItem == dotenvManager.envFile",
@@ -178,6 +210,11 @@
         }
       ],
       "explorer/context": [
+        {
+          "command": "dotenvManager.createEnvFile",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation@11"
+        },
         {
           "command": "dotenvManager.openEditor",
           "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/ && !explorerResourceIsFolder",

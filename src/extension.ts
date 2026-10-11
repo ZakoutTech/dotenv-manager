@@ -4,6 +4,7 @@ import type { EnvFile } from './core/envFileList';
 import type { EditIntent } from './shared/protocol';
 import { targetUri } from './editor/activeEnv';
 import { applyIntentToDocument } from './editor/applyEdit';
+import { createEnvFile } from './editor/createEnvFile';
 import { registerDefaultView } from './editor/defaultView';
 import { registerDiagnostics } from './editor/diagnostics';
 import { EnvFileIndex } from './editor/envFileIndex';
@@ -56,6 +57,7 @@ export function activate(context: vscode.ExtensionContext): DotenvManagerApi {
     ),
     vscode.commands.registerCommand('dotenvManager.selectEnvFile', () => selectEnvFile(index)),
     vscode.commands.registerCommand('dotenvManager.refreshEnvFiles', () => index.rescan()),
+    vscode.commands.registerCommand('dotenvManager.createEnvFile', createEnvFile),
     // Internal: apply an edit intent to a .env document (used by commands and tests).
     vscode.commands.registerCommand('dotenvManager.applyEdit', async (uri: vscode.Uri, intent: EditIntent) => {
       const document = await vscode.workspace.openTextDocument(uri);

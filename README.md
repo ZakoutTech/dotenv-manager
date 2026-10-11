@@ -18,7 +18,8 @@ A visual editor for `.env` files in VS Code. Organize variables into commented g
 - **Find every .env file.**
   - The status bar shows **Dotenv Manager (n)**, with n the number of `.env` files in the workspace. Click it for a searchable list of them, with variable counts.
   - A **Dotenv Files** panel in the Explorer always lists them.
-  - Both search all workspace folders at any depth, skip `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage` and `vendor`, and update as files are created, deleted or renamed.
+  - Both search all workspace folders at any depth and update as files are created, deleted or renamed. `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage` and `vendor` are skipped by default; change that with `dotenvManager.exclude`.
+- **Create .env files.** Use the selector, the panel, or right-click a folder in the Explorer. Paths like `apps/api/.env.local` work, and existing files are never overwritten.
 - **Masked values.** Values are hidden until you click **Show** on a row or tick **Show values**.
 - **Safe editing.** Every action is a normal edit to the text document, so undo/redo, save and the unsaved-changes marker work as usual. You can keep the text editor open beside the GUI; both stay in sync.
 - **Lossless.** Lines you don't touch are written back exactly as they were: quotes, `export`, inline comments, multiline values, CRLF line endings and lines the parser doesn't understand.
@@ -38,6 +39,8 @@ To see the raw text, click **Open as text** in the Dotenv Manager toolbar or the
 
 - **Status bar:** **Dotenv Manager (n)** shows how many `.env` files the workspace has; hover it to see them. Clicking it (or running **Dotenv Manager: Select .env File**) opens a list grouped by workspace folder, showing each file's folder and variable count. Pick a file to open it in your default editor, or use the buttons on an entry to open it as text or in Dotenv Manager.
 - **Explorer panel:** the **Dotenv Files** panel lists the same files. Click one to open it, or use the inline buttons. The panel's title bar has the selector and a refresh button.
+- **Create a file:** choose **Create .env file…** at the end of the selector, the **New File** button on the panel, the link in an empty panel, or **Create .env File…** when you right-click a folder in the Explorer. Enter a name or a path relative to the folder (default `.env`). Missing folders are created. An existing file is never overwritten; you're offered to open it instead.
+- **Excludes:** `dotenvManager.exclude` lists glob patterns that aren't searched. It defaults to the folders above. A pattern without `/` matches that name at any depth; `**`, `*`, `?`, `{a,b}` and `[abc]` are supported. To stop skipping `vendor`, remove it from the list.
 - Hide the status bar item with `dotenvManager.statusBar.enabled: false`.
 
 ### Choosing the default editor
@@ -86,6 +89,7 @@ When the GUI moves or sorts variables, it inserts a blank line where needed so a
 | Setting | Default | Description |
 |---|---|---|
 | `dotenvManager.defaultView` | `visual` | Editor used when you open a `.env` file: `visual` (Dotenv Manager) or `text` |
+| `dotenvManager.exclude` | `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage`, `vendor` (as `**/…`) | Glob patterns not searched for `.env` files |
 | `dotenvManager.statusBar.enabled` | `true` | Show **Dotenv Manager (n)** in the status bar |
 
 ## Commands
@@ -95,6 +99,7 @@ When the GUI moves or sorts variables, it inserts a blank line where needed so a
 | `Dotenv Manager: Open with Dotenv Manager` | Open the current `.env` file in the visual editor |
 | `Dotenv Manager: Open as Text` | Show the current `.env` file in the text editor |
 | `Dotenv Manager: Select .env File` | Pick one of the workspace's `.env` files to open |
+| `Dotenv Manager: Create .env File…` | Create a new `.env` file in a workspace folder and open it |
 | `Dotenv Manager: Refresh .env Files` | Search the workspace for `.env` files again |
 | `Dotenv Manager: Choose Default Editor for .env Files` | Choose whether `.env` files open in Dotenv Manager or as text |
 | `Dotenv Manager: Sort All Groups A→Z` | Sort the variables of every group. Works from the text editor too. |
