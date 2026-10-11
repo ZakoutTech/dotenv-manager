@@ -12,4 +12,5 @@ Initial release.
 - dotenv-expand style references (`${VAR}`, `$VAR`, `${VAR:-default}`, `${VAR-default}`): resolved preview, `${` autocompletion, warnings for undefined references and cycles in the GUI and the Problems panel, and renaming that can update references.
 - "Open with Dotenv Manager" in the Explorer and editor-tab context menus, and as an icon button in the editor title bar.
 - Opens `.env` files in Dotenv Manager by default. Choose the default editor with the `dotenvManager.defaultView` setting, the toolbar dropdown or the **Choose Default Editor for .env Files** command; **Open as Text** switches back.
+- Status bar item **Dotenv Manager (n)** with a quick pick of all `.env` files in the workspace, and a **Dotenv Files** view in the Explorer; detection is recursive, skips dependency/build folders and updates live.
 - Lossless round-trip: lines you don't edit are written back exactly as they were.
