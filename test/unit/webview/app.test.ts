@@ -450,3 +450,63 @@ describe('sync', () => {
     expect(root.querySelector('.error-banner')).toBeNull();
   });
 });
+
+describe('commented-out variables', () => {
+  const WITH_DISABLED: ViewDocument = {
+    groups: [
+      {
+        name: null,
+        comment: '',
+        entries: [
+          { key: 'A', value: '1', quote: '', exported: false, comment: '' },
+          { key: 'OLD', value: 'x', quote: '', exported: false, comment: '', disabled: true },
+          { key: 'B', value: '2', quote: '', exported: false, comment: '' },
+          { key: 'A', value: '0', quote: '', exported: false, comment: '', disabled: true },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => {
+    app.receive({ type: 'update', version: 2, doc: WITH_DISABLED });
+  });
+
+  const toggle = (): HTMLInputElement => $<HTMLInputElement>('[data-action="show-disabled"]');
+
+  it('hides them by default and says how many there are', () => {
+    expect($$('[data-row]').map((r) => r.dataset.row)).toEqual(['0:0', '0:2']);
+    expect(toggle().parentElement?.textContent).toBe('Show commented (2)');
+    expect($('.hidden-hint').textContent).toBe('2 commented-out variables hidden');
+    expect($('.count').textContent).toBe('2');
+  });
+
+  it('shows them, marked, with their real positions when toggled', () => {
+    toggle().click();
+    expect($$('[data-row]').map((r) => r.dataset.row)).toEqual(['0:0', '0:1', '0:2', '0:3']);
+    expect(row(0, 1).classList.contains('disabled')).toBe(true);
+    expect($('.badge-disabled', row(0, 1)).textContent).toBe('commented');
+    expect(root.querySelector('.hidden-hint')).toBeNull();
+    expect(root.querySelector('.badge-duplicate')).toBeNull();
+  });
+
+  it('comments out and uncomments with one click', () => {
+    $('[data-action="toggle-disabled"]', row(0, 0)).click();
+    app.receive({ type: 'update', version: 3, doc: WITH_DISABLED }); // the edit queue sends one edit per version
+    toggle().click();
+    $('[data-action="toggle-disabled"]', row(0, 1)).click();
+    expect(edits()).toEqual([
+      { type: 'updateVariable', ref: { group: 0, index: 0 }, changes: { disabled: true } },
+      { type: 'updateVariable', ref: { group: 0, index: 1 }, changes: { disabled: false } },
+    ]);
+  });
+
+  it('Alt+Down skips hidden rows', () => {
+    key(row(0, 0), 'ArrowDown', { altKey: true });
+    expect(edits()).toEqual([{ type: 'moveVariable', ref: { group: 0, index: 0 }, toGroup: 0, toIndex: 2 }]);
+  });
+
+  it('disables the toggle when the file has no commented-out variables', () => {
+    app.receive({ type: 'update', version: 3, doc: DOC });
+    expect(toggle().disabled).toBe(true);
+  });
+});

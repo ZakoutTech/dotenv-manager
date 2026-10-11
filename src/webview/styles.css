@@ -81,6 +81,7 @@ textarea {
   margin-bottom: 12px;
 }
 .reveal-all,
+.show-disabled,
 .export {
   display: inline-flex;
   align-items: center;
@@ -192,6 +193,7 @@ textarea {
 }
 .row-main {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   font-family: var(--vscode-editor-font-family);
@@ -238,6 +240,24 @@ textarea {
   border-radius: 10px;
   color: var(--vscode-editorWarning-foreground, orange);
   border: 1px solid currentColor;
+}
+.badge-disabled {
+  font-size: 0.8em;
+  padding: 0 6px;
+  border-radius: 10px;
+  color: var(--muted);
+  border: 1px solid currentColor;
+}
+/* Commented-out variables: readable but clearly inactive. */
+.row.disabled .key,
+.row.disabled .value,
+.row.disabled .eq,
+.row.disabled .resolved {
+  opacity: 0.6;
+  font-style: italic;
+}
+.row.disabled .key {
+  text-decoration: line-through;
 }
 .field-error {
   color: var(--vscode-errorForeground);
@@ -370,10 +390,17 @@ textarea {
 .group-comment-editor,
 .group > .confirm,
 .group > .field-error,
-.empty-hint {
+.empty-hint,
+.hidden-hint {
   margin-left: var(--group-indent);
 }
-.group.ungrouped .empty-hint {
+.hidden-hint {
+  color: var(--muted);
+  font-size: 0.9em;
+  margin-top: 4px;
+}
+.group.ungrouped .empty-hint,
+.group.ungrouped .hidden-hint {
   margin-left: 32px;
 }
 
@@ -386,7 +413,8 @@ textarea {
 }
 .resolved {
   flex: 0 1 auto;
-  min-width: 0;
+  /* Wrap the row's buttons to a new line rather than squeezing the preview into a sliver. */
+  min-width: min(16ch, 100%);
   word-break: normal;
   overflow-wrap: anywhere;
 }

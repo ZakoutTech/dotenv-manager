@@ -172,8 +172,15 @@ function updateEntry(entry: EnvEntry, changes: VariableChanges): EnvEntry {
     }
     reformat = true;
   }
+  if (changes.disabled !== undefined) {
+    next.disabled = changes.disabled || undefined;
+    reformat = true;
+  }
   if (changes.comment !== undefined) {
     next.comment = toCommentLines(changes.comment);
+  }
+  if (next.disabled && next.value.includes('\n')) {
+    throw new EditError(`${next.key} has a multiline value, which can't be commented out.`);
   }
   if (reformat) {
     delete next.raw;

@@ -8,7 +8,7 @@ import type {
 } from '../shared/protocol';
 import type { DefaultView } from '../shared/associations';
 import { groupNameError, keyError } from '../shared/validation';
-import { groupDrop, keyboardGroupMove, keyboardVariableMove, variableDrop } from './dnd';
+import { groupDrop, keyboardGroupMove, variableDrop } from './dnd';
 import type { VariableMove, VariablePosition } from './dnd';
 import { attachCompletion } from './completion';
 import { EditQueue } from './editQueue';
@@ -26,6 +26,8 @@ interface State {
   collapsed: Set<number>;
   revealAll: boolean;
   revealed: Set<string>;
+  /** Show commented-out variables (`# KEY=value`). */
+  showDisabled: boolean;
   editing?: Editing;
   /** In-progress text of the open editor(s), keyed by field name (`text` for single-field editors). */
   draft: Record<string, string>;
@@ -77,7 +79,7 @@ export interface App {
 
 export function createApp(root: HTMLElement, post: (message: FromWebviewMessage) => void): App {
   const queue = new EditQueue(post);
-  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), draft: {} };
+  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), showDisabled: false, draft: {} };
   let rendering = false;
 
   const dispatch = (intent: EditIntent): void => queue.submit(intent);
@@ -124,6 +126,25 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       dispatch({ type: 'moveGroup', group: from, toIndex: to });
       state.focusNext = `drag-group-${to}`;
     }
+  }
+
+  const isShown = (entry: ViewEntry): boolean => state.showDisabled || !entry.disabled;
+
+  /** Model indices of the rows shown in group `g` (hidden commented-out variables are skipped). */
+  const visibleIndices = (g: number): number[] =>
+    groupAt(g)?.entries.flatMap((e, i) => (isShown(e) ? [i] : [])) ?? [];
+
+  /** Alt+Up/Down: swap with the neighbouring *shown* row, or move to the end/start of the adjacent group. */
+  function keyboardMove(source: VariablePosition, direction: 'up' | 'down'): VariableMove | null {
+    const shown = visibleIndices(source.group);
+    const neighbour = shown[shown.indexOf(source.index) + (direction === 'up' ? -1 : 1)];
+    if (neighbour !== undefined) {
+      return { toGroup: source.group, toIndex: neighbour };
+    }
+    if (direction === 'up') {
+      return source.group > 0 ? { toGroup: source.group - 1, toIndex: counts()[source.group - 1] } : null;
+    }
+    return source.group < groupCount() - 1 ? { toGroup: source.group + 1, toIndex: 0 } : null;
   }
 
   /** Alt+ArrowUp / Alt+ArrowDown outside inline editors; returns the direction or undefined. */
@@ -253,8 +274,9 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     return count;
   }
 
+  /** Keys dotenv loads (for `${` completion). */
   function allKeys(): string[] {
-    return state.doc?.groups.flatMap((g) => g.entries.map((e) => e.key)) ?? [];
+    return state.doc?.groups.flatMap((g) => g.entries.filter((e) => !e.disabled).map((e) => e.key)) ?? [];
   }
 
   /** Single-field inline editor: Enter saves, Shift+Enter adds a line (textarea), Escape cancels, blur saves. */
@@ -320,7 +342,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     const seen = new Set<string>();
     const dups = new Set<string>();
     for (const g of doc.groups) {
-      for (const e of g.entries) {
+      for (const e of g.entries.filter((entry) => !entry.disabled)) {
         if (seen.has(e.key)) {
           dups.add(e.key);
         }
@@ -436,7 +458,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
     const li = h(
       'li',
-      { class: 'row', 'data-row': id, draggable: editingRow ? 'false' : 'true' },
+      { class: entry.disabled ? 'row disabled' : 'row', 'data-row': id, draggable: editingRow ? 'false' : 'true' },
       comment,
       h(
         'div',
@@ -448,7 +470,8 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         resolved,
         reveal,
         h('label', { class: 'export', title: 'Prefix with export' }, exportBox, 'export'),
-        duplicates.has(entry.key)
+        entry.disabled ? h('span', { class: 'badge-disabled', title: 'Commented out: dotenv ignores this line' }, 'commented') : null,
+        !entry.disabled && duplicates.has(entry.key)
           ? h('span', { class: 'badge-duplicate', title: `${entry.key} is defined more than once; the last one wins` }, 'duplicate')
           : null,
         h(
@@ -456,6 +479,13 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
           { class: 'actions' },
           on(button('Comment', 'edit-comment', `comment-${id}`, { title: 'Edit comment' }), 'click', () =>
             startEditing({ kind: 'comment', group: g, index: i }, { text: entry.comment }),
+          ),
+          on(
+            button(entry.disabled ? 'Uncomment' : 'Comment out', 'toggle-disabled', `disable-${id}`, {
+              title: entry.disabled ? `Uncomment ${entry.key} so dotenv loads it` : `Comment out ${entry.key} (# ${entry.key}=…)`,
+            }),
+            'click',
+            () => dispatch({ type: 'updateVariable', ref: { group: g, index: i }, changes: { disabled: !entry.disabled } }),
           ),
           on(button('Delete', 'delete-variable', `delete-${id}`, { class: 'danger', title: `Delete ${entry.key}` }), 'click', () =>
             dispatch({ type: 'deleteVariable', ref: { group: g, index: i } }),
@@ -493,7 +523,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     on(li, 'keydown', (event) => {
       const direction = moveKey(event);
       if (direction) {
-        moveVariable(source, keyboardVariableMove(counts(), source, direction));
+        moveVariable(source, keyboardMove(source, direction));
       }
     });
     return li;
@@ -541,6 +571,8 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     const named = group.name !== null;
     const expanded = !state.collapsed.has(g);
     const count = group.entries.length;
+    const active = group.entries.filter((e) => !e.disabled).length;
+    const hidden = group.entries.filter((e) => !isShown(e)).length;
     const label = group.name ?? 'Ungrouped';
 
     const toggle = on(
@@ -635,11 +667,15 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
     const body: Child[] = [];
     if (expanded) {
+      const rows = group.entries.flatMap((e, i) => (isShown(e) ? [renderRow(e, g, i, duplicates)] : []));
       body.push(
-        count > 0
-          ? h('ul', { class: 'rows', role: 'list' }, ...group.entries.map((e, i) => renderRow(e, g, i, duplicates)))
+        rows.length > 0
+          ? h('ul', { class: 'rows', role: 'list' }, ...rows)
           : h('p', { class: 'empty-hint' }, 'No variables in this group.'),
       );
+      if (hidden > 0) {
+        body.push(h('p', { class: 'hidden-hint' }, `${hidden} commented-out variable${hidden === 1 ? '' : 's'} hidden`));
+      }
       if (isEditing('newVariable', g)) {
         body.push(
           inlineForm('new-variable', 'Add variable', [
@@ -663,7 +699,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         : null,
       toggle,
       title,
-      h('span', { class: 'count', title: `${count} variables` }, String(count)),
+      h(
+        'span',
+        { class: 'count', title: count > active ? `${active} variables, ${count - active} commented out` : `${count} variables` },
+        count > active && state.showDisabled ? `${active} + ${count - active}` : String(active),
+      ),
       actions,
     );
 
@@ -742,6 +782,18 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       state.revealAll = revealAll.checked;
       render();
     });
+    const disabledCount = state.doc?.groups.reduce((n, g) => n + g.entries.filter((e) => e.disabled).length, 0) ?? 0;
+    const showDisabled = h('input', {
+      type: 'checkbox',
+      'data-action': 'show-disabled',
+      'data-focus-id': 'show-disabled',
+      checked: state.showDisabled,
+      disabled: disabledCount === 0 && !state.showDisabled,
+    });
+    on(showDisabled, 'change', () => {
+      state.showDisabled = showDisabled.checked;
+      render();
+    });
     children.push(
       h(
         'div',
@@ -751,6 +803,12 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
           dispatch({ type: 'sortAll' }),
         ),
         h('label', { class: 'reveal-all' }, revealAll, 'Show values'),
+        h(
+          'label',
+          { class: 'show-disabled', title: 'Show variables that are commented out (# KEY=value)' },
+          showDisabled,
+          `Show commented (${disabledCount})`,
+        ),
         h('span', { class: 'toolbar-spacer' }),
         state.defaultView ? defaultViewPicker(state.defaultView) : null,
         on(button('Open as text', 'open-as-text', 'open-as-text', { title: 'Show this file in the text editor' }), 'click', () =>

@@ -3,6 +3,8 @@ import type { EnvDocument, EnvEntry, EnvGroup, EnvItem, Quote } from './model';
 const HEADER_RE = /^\s*#\s*===\s*(.+?)\s*===\s*$/;
 const ENTRY_RE = /^\s*(export\s+)?([A-Za-z_][A-Za-z0-9_.-]*)\s*=\s*(.*)$/;
 const QUOTES = new Set(['"', "'", '`']);
+/** `# KEY=value` / `# export KEY=value`: a commented-out variable. No space before `=`, so prose like `# Note = …` stays a comment. */
+const DISABLED_RE = /^\s*#\s*((?:export\s+)?[A-Za-z_][A-Za-z0-9_.-]*=.*)$/;
 
 export function isHeaderLine(line: string): boolean {
   return HEADER_RE.test(line);
@@ -10,6 +12,19 @@ export function isHeaderLine(line: string): boolean {
 
 function isCommentLine(line: string): boolean {
   return line.trimStart().startsWith('#');
+}
+
+/** The variable a single comment line comments out, or undefined. */
+function parseDisabled(line: string, eol: string): EnvEntry | undefined {
+  const match = DISABLED_RE.exec(line);
+  if (!match || isHeaderLine(line)) {
+    return undefined;
+  }
+  const parsed = parseEntry([match[1]], 0, eol);
+  if (!parsed || parsed.lineCount !== 1) {
+    return undefined;
+  }
+  return { ...parsed.entry, disabled: true, raw: line };
 }
 
 function stripInlineComment(text: string): string {
@@ -131,10 +146,20 @@ export function parse(source: string): EnvDocument {
       group = { name: header[1], header: line, comment: [], items: [] };
       groups.push(group);
       i++;
-      while (i < lines.length && isCommentLine(lines[i]) && !isHeaderLine(lines[i])) {
+      while (i < lines.length && isCommentLine(lines[i]) && !isHeaderLine(lines[i]) && !parseDisabled(lines[i], eol)) {
         group.comment.push(lines[i]);
         i++;
       }
+      continue;
+    }
+
+    const disabled = parseDisabled(line, eol);
+    if (disabled) {
+      disabled.comment = pending;
+      disabled.line = i;
+      pending = [];
+      push(disabled);
+      i++;
       continue;
     }
 

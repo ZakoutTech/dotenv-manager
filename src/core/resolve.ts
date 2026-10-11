@@ -164,8 +164,9 @@ export function isExpandable(entry: EnvEntry): boolean {
   return entry.quote !== "'";
 }
 
+/** The variables dotenv loads (commented-out ones excluded). */
 function allEntries(doc: EnvDocument): EnvEntry[] {
-  return doc.groups.flatMap((group) => group.items.filter((item): item is EnvEntry => item.type === 'entry'));
+  return doc.groups.flatMap((group) => group.items.filter((item): item is EnvEntry => item.type === 'entry' && !item.disabled));
 }
 
 interface Resolver {

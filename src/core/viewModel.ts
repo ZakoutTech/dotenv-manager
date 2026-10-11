@@ -24,6 +24,9 @@ export function toViewDocument(doc: EnvDocument): ViewDocument {
         if (item.inlineComment !== undefined) {
           entry.inlineComment = item.inlineComment;
         }
+        if (item.disabled) {
+          entry.disabled = true;
+        }
         const resolution = resolutions.get(item);
         if (resolution && resolution.references.length > 0) {
           entry.references = resolution.references;

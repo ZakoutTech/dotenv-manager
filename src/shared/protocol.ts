@@ -21,6 +21,8 @@ export interface VariableChanges {
   comment?: string;
   /** Plain inline comment text; `null` removes it. */
   inlineComment?: string | null;
+  /** Comment the variable out (`# KEY=value`) or back in. */
+  disabled?: boolean;
 }
 
 export type EditIntent =
@@ -44,6 +46,8 @@ export interface ViewEntry {
   exported: boolean;
   comment: string;
   inlineComment?: string;
+  /** Commented out (`# KEY=value`); never resolved or referenced. */
+  disabled?: true;
   /** Names referenced by the value (present only when there are references). */
   references?: string[];
   /** Expanded value (present only when the value has references). */

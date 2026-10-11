@@ -76,5 +76,5 @@ export function pickerEntries(files: EnvFile[], activeUri: string | undefined, m
 }
 
 export function countVariables(text: string): number {
-  return parse(text).groups.reduce((n, g) => n + g.items.filter((i) => i.type === 'entry').length, 0);
+  return parse(text).groups.reduce((n, g) => n + g.items.filter((i) => i.type === 'entry' && !i.disabled).length, 0);
 }

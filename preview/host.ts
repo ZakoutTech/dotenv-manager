@@ -19,6 +19,7 @@ NODE_ENV=development
 
 # Hostname of the DB server
 DB_HOST=localhost
+# DB_HOST=staging-db.internal
 DB_PORT=5432
 DB_URL=postgres://\${DB_HOST}:\${DB_PORT}/app
 DB_REPLICA=\${DB_HOSTS}
@@ -26,6 +27,8 @@ DB_REPLICA=\${DB_HOSTS}
 # === API ===
 # Get this from the dashboard
 API_KEY="abc 123"
+# Old key, kept for rollback
+# API_KEY="old 999"
 API_TIMEOUT=30 # seconds
 NODE_ENV=test
 `;

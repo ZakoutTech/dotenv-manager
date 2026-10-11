@@ -21,6 +21,8 @@ export interface EnvEntry {
   comment: string[];
   /** Text after `#` on the same line, without the leading space. */
   inlineComment?: string;
+  /** Commented out (`# KEY=value`): kept in the file but ignored by dotenv. Single-line values only. */
+  disabled?: boolean;
   /** Original source text (may span several lines for multiline values). */
   raw?: string;
   /** 0-based line of the entry in the parsed source (set by the parser only). */

@@ -48,7 +48,7 @@ export function formatEntry(entry: EnvEntry): string {
   }
   const value = quote === '' ? entry.value : `${quote}${escapeQuote(entry.value, quote)}${quote}`;
   const inline = entry.inlineComment !== undefined ? ` # ${entry.inlineComment}` : '';
-  return `${entry.exported ? 'export ' : ''}${entry.key}=${value}${inline}`;
+  return `${entry.disabled ? '# ' : ''}${entry.exported ? 'export ' : ''}${entry.key}=${value}${inline}`;
 }
 
 function serializeGroup(group: EnvGroup, eol: string, out: string[]): void {
