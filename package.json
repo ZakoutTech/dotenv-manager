@@ -100,6 +100,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "eslint src test preview",
     "preview": "node scripts/preview.mjs",
+    "install:cursor": "npm run package && node scripts/install-extension.mjs cursor",
+    "install:code": "npm run package && node scripts/install-extension.mjs code",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "pretest:integration": "npm run build && tsc -p tsconfig.integration.json",

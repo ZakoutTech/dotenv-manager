@@ -80,6 +80,15 @@ code --install-extension dotenv-manager-0.0.1.vsix --force     # VS Code
 cursor --install-extension dotenv-manager-0.0.1.vsix --force   # Cursor
 ```
 
+From a clone of this repository, one command does both steps (it also hides the editor CLI's `DEP0169` deprecation warning, which comes from the editor and is harmless):
+
+```sh
+npm run install:cursor   # Cursor
+npm run install:code     # VS Code
+```
+
+Then run **Developer: Reload Window**.
+
 Bumping `version` in `package.json` before packaging makes it easier to tell builds apart.
 
 ## Uninstalling

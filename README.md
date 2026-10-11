@@ -86,6 +86,7 @@ npm run test:integration # integration tests in a downloaded VS Code
 npm run lint
 npm run package          # build a .vsix
 npm run preview          # GUI in the browser at http://127.0.0.1:5178/
+npm run install:cursor   # package and install into Cursor (install:code for VS Code)
 ```
 
 - **In VS Code:** press <kbd>F5</kbd> (**Run Extension**) to start an Extension Development Host with the `test/fixtures` workspace. Keep `npm run watch` running and use **Developer: Reload Webviews** to pick up GUI changes, or **Developer: Open Webview Developer Tools** to inspect them.
