@@ -1,4 +1,7 @@
 import * as vscode from 'vscode';
+import { EditError } from './core/edits';
+import type { EditIntent } from './shared/protocol';
+import { applyIntentToDocument } from './editor/applyEdit';
 import { DotenvEditorProvider } from './editor/DotenvEditorProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -11,6 +14,19 @@ export function activate(context: vscode.ExtensionContext): void {
         return;
       }
       await vscode.commands.executeCommand('vscode.openWith', target, DotenvEditorProvider.viewType);
+    }),
+    // Internal: apply an edit intent to a .env document (used by commands and tests).
+    vscode.commands.registerCommand('dotenvManager.applyEdit', async (uri: vscode.Uri, intent: EditIntent) => {
+      const document = await vscode.workspace.openTextDocument(uri);
+      try {
+        return await applyIntentToDocument(document, intent);
+      } catch (err) {
+        if (err instanceof EditError) {
+          void vscode.window.showErrorMessage(err.message);
+          return false;
+        }
+        throw err;
+      }
     }),
   );
 }
