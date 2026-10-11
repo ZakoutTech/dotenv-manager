@@ -21,14 +21,24 @@ A visual editor for `.env` files in VS Code. Organize variables into commented g
 
 ## Usage
 
-Open a `.env`, `.env.*` or `*.env` file, then either:
+`.env`, `.env.*` and `*.env` files open in Dotenv Manager by default. To open one in Dotenv Manager from elsewhere (for example when you chose the text editor as default):
 
 - right-click it in the **Explorer** and choose **Open with Dotenv Manager**,
 - click the **Open with Dotenv Manager** button (the **E** icon) in the editor title bar,
 - run **Dotenv Manager: Open with Dotenv Manager** from the Command Palette, or
 - right-click the editor tab and choose **Open with Dotenv Manager** (or **Reopen Editor With… → Dotenv Manager**).
 
-To make Dotenv Manager the default editor for these files, choose **Configure default editor for…** in the same **Reopen Editor With…** list.
+To see the raw text, click **Open as text** in the Dotenv Manager toolbar or the **Open as Text** button in the editor title bar. The two views replace each other in the same tab. If the file has unsaved changes, both tabs stay open so nothing is lost.
+
+### Choosing the default editor
+
+Pick which editor opens `.env` files in any of these places:
+
+- the **Open .env files with** dropdown in the Dotenv Manager toolbar,
+- **Dotenv Manager: Choose Default Editor for .env Files** in the Command Palette,
+- the **Dotenv Manager › Default View** setting (`dotenvManager.defaultView`: `visual` or `text`).
+
+Dotenv Manager applies the choice by updating the matching entries in VS Code's `workbench.editorAssociations` setting. It writes to your user settings, or to the workspace settings if you set `dotenvManager.defaultView` per workspace.
 
 | Action | How |
 |---|---|
@@ -61,11 +71,19 @@ DB_URL=postgres://${DB_HOST}:${DB_PORT}/app
 
 When the GUI moves or sorts variables, it inserts a blank line where needed so a comment can't end up attached to the wrong variable or group.
 
+## Settings
+
+| Setting | Default | Description |
+|---|---|---|
+| `dotenvManager.defaultView` | `visual` | Editor used when you open a `.env` file: `visual` (Dotenv Manager) or `text` |
+
 ## Commands
 
 | Command | Description |
 |---|---|
 | `Dotenv Manager: Open with Dotenv Manager` | Open the current `.env` file in the visual editor |
+| `Dotenv Manager: Open as Text` | Show the current `.env` file in the text editor |
+| `Dotenv Manager: Choose Default Editor for .env Files` | Choose whether `.env` files open in Dotenv Manager or as text |
 | `Dotenv Manager: Sort All Groups A→Z` | Sort the variables of every group. Works from the text editor too. |
 
 ## Notes

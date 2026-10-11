@@ -41,9 +41,25 @@
             "filenamePattern": ".env.*"
           }
         ],
-        "priority": "option"
+        "priority": "default"
       }
     ],
+    "configuration": {
+      "title": "Dotenv Manager",
+      "properties": {
+        "dotenvManager.defaultView": {
+          "type": "string",
+          "enum": ["visual", "text"],
+          "enumItemLabels": ["Dotenv Manager", "Text Editor"],
+          "enumDescriptions": [
+            "Open .env files in the Dotenv Manager visual editor.",
+            "Open .env files in the plain text editor."
+          ],
+          "default": "visual",
+          "markdownDescription": "Editor used when you open a `.env`, `.env.*` or `*.env` file. Dotenv Manager keeps the matching `#workbench.editorAssociations#` entries in sync with this choice. You can always switch with **Open as Text** / **Open with Dotenv Manager**."
+        }
+      }
+    },
     "commands": [
       {
         "command": "dotenvManager.openEditor",
@@ -55,6 +71,17 @@
         }
       },
       {
+        "command": "dotenvManager.openText",
+        "title": "Open as Text",
+        "category": "Dotenv Manager",
+        "icon": "$(go-to-file)"
+      },
+      {
+        "command": "dotenvManager.chooseDefaultView",
+        "title": "Choose Default Editor for .env Files",
+        "category": "Dotenv Manager"
+      },
+      {
         "command": "dotenvManager.sortAll",
         "title": "Sort All Groups A→Z",
         "category": "Dotenv Manager"
@@ -62,6 +89,10 @@
     ],
     "menus": {
       "commandPalette": [
+        {
+          "command": "dotenvManager.openText",
+          "when": "activeCustomEditorId == 'dotenvManager.editor'"
+        },
         {
           "command": "dotenvManager.openEditor",
           "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/"
@@ -80,12 +111,22 @@
       ],
       "editor/title/context": [
         {
+          "command": "dotenvManager.openText",
+          "when": "activeCustomEditorId == 'dotenvManager.editor'",
+          "group": "1_open"
+        },
+        {
           "command": "dotenvManager.openEditor",
           "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/",
           "group": "1_open"
         }
       ],
       "editor/title": [
+        {
+          "command": "dotenvManager.openText",
+          "when": "activeCustomEditorId == 'dotenvManager.editor'",
+          "group": "navigation"
+        },
         {
           "command": "dotenvManager.openEditor",
           "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/ && activeCustomEditorId != 'dotenvManager.editor'",

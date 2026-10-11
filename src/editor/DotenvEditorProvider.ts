@@ -3,7 +3,10 @@ import { EditError } from '../core/edits';
 import { parse } from '../core/parse';
 import { toViewDocument } from '../core/viewModel';
 import type { FromWebviewMessage, ToWebviewMessage } from '../shared/protocol';
+import { DOTENV_VIEW_TYPE } from '../shared/associations';
 import { applyIntentToDocument } from './applyEdit';
+import { getDefaultView, setDefaultView } from './defaultView';
+import { reopenWith } from './reopen';
 import { createNonce, getWebviewHtml } from './webviewHtml';
 
 /**
@@ -13,7 +16,7 @@ import { createNonce, getWebviewHtml } from './webviewHtml';
  * WorkspaceEdit, and every document change re-renders the webview.
  */
 export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
-  static readonly viewType = 'dotenvManager.editor';
+  static readonly viewType = DOTENV_VIEW_TYPE;
 
   static register(context: vscode.ExtensionContext): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider(
@@ -47,12 +50,28 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
         postUpdate();
       }
     });
-    webviewPanel.onDidDispose(() => changeSubscription.dispose());
+    const postSettings = (): void => post({ type: 'settings', defaultView: getDefaultView() });
+    const configSubscription = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('dotenvManager.defaultView')) {
+        postSettings();
+      }
+    });
+    webviewPanel.onDidDispose(() => {
+      changeSubscription.dispose();
+      configSubscription.dispose();
+    });
 
     webview.onDidReceiveMessage(async (message: FromWebviewMessage) => {
       switch (message.type) {
         case 'ready':
+          postSettings();
           postUpdate();
+          return;
+        case 'setDefaultView':
+          await setDefaultView(message.view);
+          return;
+        case 'openAsText':
+          await reopenWith(document.uri, 'default');
           return;
         case 'edit':
           if (message.version !== document.version) {

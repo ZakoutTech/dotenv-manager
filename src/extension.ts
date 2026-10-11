@@ -2,11 +2,14 @@ import * as vscode from 'vscode';
 import { EditError } from './core/edits';
 import type { EditIntent } from './shared/protocol';
 import { applyIntentToDocument } from './editor/applyEdit';
+import { registerDefaultView } from './editor/defaultView';
 import { registerDiagnostics } from './editor/diagnostics';
+import { reopenWith } from './editor/reopen';
 import { DotenvEditorProvider } from './editor/DotenvEditorProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
   registerDiagnostics(context);
+  registerDefaultView(context);
   context.subscriptions.push(
     DotenvEditorProvider.register(context),
     vscode.commands.registerCommand('dotenvManager.openEditor', async (uri?: vscode.Uri) => {
@@ -15,7 +18,15 @@ export function activate(context: vscode.ExtensionContext): void {
         void vscode.window.showInformationMessage('Open a .env file first.');
         return;
       }
-      await vscode.commands.executeCommand('vscode.openWith', target, DotenvEditorProvider.viewType);
+      await reopenWith(target, DotenvEditorProvider.viewType);
+    }),
+    vscode.commands.registerCommand('dotenvManager.openText', async (uri?: vscode.Uri) => {
+      const target = uri ?? activeEnvUri();
+      if (!target) {
+        void vscode.window.showInformationMessage('Open a .env file first.');
+        return;
+      }
+      await reopenWith(target, 'default');
     }),
     vscode.commands.registerCommand('dotenvManager.sortAll', async (uri?: vscode.Uri) => {
       const target = uri ?? activeEnvUri();

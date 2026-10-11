@@ -6,6 +6,7 @@ import type {
   ViewEntry,
   ViewGroup,
 } from '../shared/protocol';
+import type { DefaultView } from '../shared/associations';
 import { groupNameError, keyError } from '../shared/validation';
 import { groupDrop, keyboardGroupMove, keyboardVariableMove, variableDrop } from './dnd';
 import type { VariableMove, VariablePosition } from './dnd';
@@ -33,6 +34,8 @@ interface State {
   drag?: { kind: 'variable'; group: number; index: number } | { kind: 'group'; group: number };
   /** Focus target for the render that follows the next document update (keyboard moves). */
   focusNext?: string;
+  /** Editor that opens .env files by default (unknown until the extension says). */
+  defaultView?: DefaultView;
 }
 
 type Child = Node | string | null | undefined | false;
@@ -713,6 +716,22 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     return section;
   }
 
+  function defaultViewPicker(current: DefaultView): HTMLElement {
+    const select = h(
+      'select',
+      { 'data-action': 'default-view', 'data-focus-id': 'default-view', title: 'Editor used when you open a .env file' },
+      h('option', { value: 'visual' }, 'Dotenv Manager'),
+      h('option', { value: 'text' }, 'Text editor'),
+    );
+    select.value = current;
+    on(select, 'change', () => {
+      const view = select.value === 'text' ? 'text' : 'visual';
+      state.defaultView = view;
+      post({ type: 'setDefaultView', view });
+    });
+    return h('label', { class: 'default-view' }, 'Open .env files with', select);
+  }
+
   function render(focusId?: string): void {
     rendering = true;
     const activeId = (document.activeElement as HTMLElement | null)?.dataset?.focusId;
@@ -732,6 +751,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
           dispatch({ type: 'sortAll' }),
         ),
         h('label', { class: 'reveal-all' }, revealAll, 'Show values'),
+        h('span', { class: 'toolbar-spacer' }),
+        state.defaultView ? defaultViewPicker(state.defaultView) : null,
+        on(button('Open as text', 'open-as-text', 'open-as-text', { title: 'Show this file in the text editor' }), 'click', () =>
+          post({ type: 'openAsText' }),
+        ),
       ),
     );
 
@@ -797,6 +821,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
   return {
     receive(message: ToWebviewMessage): void {
+      if (message.type === 'settings') {
+        state.defaultView = message.defaultView;
+        render();
+        return;
+      }
       if (message.type !== 'update') {
         state.error = message.message;
         queue.failed();

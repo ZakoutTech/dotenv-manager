@@ -4,6 +4,7 @@
  */
 
 import type { Quote } from '../core/model';
+import type { DefaultView } from './associations';
 
 /** Addresses a variable by its group and its position among that group's variables. */
 export interface EntryRef {
@@ -64,6 +65,11 @@ export interface ViewDocument {
 
 export type ToWebviewMessage =
   | { type: 'update'; version: number; doc: ViewDocument }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  | { type: 'settings'; defaultView: DefaultView };
 
-export type FromWebviewMessage = { type: 'ready' } | { type: 'edit'; version: number; intent: EditIntent };
+export type FromWebviewMessage =
+  | { type: 'ready' }
+  | { type: 'edit'; version: number; intent: EditIntent }
+  | { type: 'setDefaultView'; view: DefaultView }
+  | { type: 'openAsText' };
