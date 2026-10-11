@@ -76,6 +76,8 @@ When the GUI moves or sorts variables, it inserts a blank line where needed so a
 
 ## Development
 
+To install the extension from a local build (VS Code or Cursor) without the Marketplace, see [INSTALL.md](INSTALL.md).
+
 ```sh
 npm install
 npm run build            # bundle extension and webview into dist/
