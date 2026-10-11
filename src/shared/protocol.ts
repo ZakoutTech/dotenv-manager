@@ -66,15 +66,27 @@ export interface ViewDocument {
   groups: ViewGroup[];
 }
 
+/** An entry of the toolbar's file dropdown. */
+export interface FileChoice {
+  uri: string;
+  /** Workspace folder name and path inside it, e.g. `my-app/apps/api/.env.local`. */
+  label: string;
+  /** Absolute path, for the tooltip. */
+  path: string;
+}
+
 export type ToWebviewMessage =
   /** `text` is the document text, for the read-only preview pane. */
   | { type: 'update'; version: number; doc: ViewDocument; text?: string; dirty?: boolean }
   /** Unsaved-changes state changed without a text change (saved or reverted to disk). */
   | { type: 'dirty'; dirty: boolean }
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string }
+  /** The detected .env files and which one this editor shows. */
+  | { type: 'files'; files: FileChoice[]; current: string };
 
 export type FromWebviewMessage =
   | { type: 'ready' }
   | { type: 'edit'; version: number; intent: EditIntent }
   | { type: 'openAsText' }
-  | { type: 'save' };
+  | { type: 'save' }
+  | { type: 'openFile'; uri: string };

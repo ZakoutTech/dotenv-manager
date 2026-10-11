@@ -1,5 +1,6 @@
 import type {
   EditIntent,
+  FileChoice,
   FromWebviewMessage,
   ToWebviewMessage,
   ViewDocument,
@@ -34,6 +35,8 @@ interface State {
   text?: string;
   /** The document has unsaved changes. */
   dirty: boolean;
+  /** Detected .env files for the file dropdown, and the one shown here. */
+  files?: { choices: FileChoice[]; current: string };
   editing?: Editing;
   /** In-progress text of the open editor(s), keyed by field name (`text` for single-field editors). */
   draft: Record<string, string>;
@@ -760,6 +763,32 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     return section;
   }
 
+  /** Dropdown of the detected .env files, labelled by path; picking one opens it in Dotenv Manager. */
+  function fileSelect(files: NonNullable<State['files']>): HTMLElement {
+    const options = files.choices.map((f) => h('option', { value: f.uri, title: f.path }, f.label));
+    const current = files.choices.find((f) => f.uri === files.current);
+    const select = h(
+      'select',
+      {
+        'data-action': 'select-file',
+        'data-focus-id': 'select-file',
+        'aria-label': '.env file',
+        title: current ? `${current.path}\nSwitch to another detected .env file` : 'Switch to another detected .env file',
+      },
+      ...options,
+    );
+    select.value = files.current;
+    on(select, 'change', () => {
+      const uri = select.value;
+      // This editor keeps showing its own file; the chosen one opens in its own tab.
+      select.value = files.current;
+      if (uri !== files.current) {
+        post({ type: 'openFile', uri });
+      }
+    });
+    return h('label', { class: 'file-select' }, h('span', { class: 'file-select-label' }, 'File'), select);
+  }
+
   /** Read-only, highlighted .env text; values follow the "Show values" mask. */
   function renderTextPreview(): HTMLElement {
     const lines = tokenizeEnv(state.text ?? '');
@@ -823,6 +852,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       h(
         'div',
         { class: 'toolbar', role: 'toolbar', 'aria-label': 'Dotenv Manager' },
+        state.files ? fileSelect(state.files) : null,
         on(
           button('Save', 'save', 'save', {
             class: state.dirty ? 'primary' : undefined,
@@ -919,6 +949,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
   return {
     receive(message: ToWebviewMessage): void {
+      if (message.type === 'files') {
+        state.files = { choices: message.files, current: message.current };
+        render();
+        return;
+      }
       if (message.type === 'dirty') {
         state.dirty = message.dirty;
         render();

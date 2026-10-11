@@ -1,16 +1,28 @@
 import * as vscode from 'vscode';
 import { EditError } from '../core/edits';
+import { fileChoices } from '../core/envFileList';
 import { parse } from '../core/parse';
 import { toViewDocument } from '../core/viewModel';
 import type { FromWebviewMessage, ToWebviewMessage } from '../shared/protocol';
 import { DOTENV_VIEW_TYPE } from '../shared/associations';
 import { applyIntentToDocument } from './applyEdit';
+import type { EnvFileIndex } from './envFileIndex';
 import { reopenWith } from './reopen';
 import { createNonce, getWebviewHtml } from './webviewHtml';
 
 function updateMessage(document: vscode.TextDocument): ToWebviewMessage {
   const text = document.getText();
   return { type: 'update', version: document.version, doc: toViewDocument(parse(text)), text, dirty: document.isDirty };
+}
+
+/** The toolbar dropdown's files: everything detected, plus this document if it isn't (e.g. outside the workspace). */
+function filesMessage(index: EnvFileIndex, document: vscode.TextDocument): Extract<ToWebviewMessage, { type: 'files' }> {
+  const files = fileChoices(index.list(), (uri) => vscode.Uri.parse(uri).fsPath);
+  const current = document.uri.toString();
+  if (!files.some((f) => f.uri === current)) {
+    files.unshift({ uri: current, label: vscode.workspace.asRelativePath(document.uri, true), path: document.uri.fsPath });
+  }
+  return { type: 'files', files, current };
 }
 
 /**
@@ -22,17 +34,20 @@ function updateMessage(document: vscode.TextDocument): ToWebviewMessage {
 export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
   static readonly viewType = DOTENV_VIEW_TYPE;
 
-  static register(context: vscode.ExtensionContext): vscode.Disposable {
+  static register(context: vscode.ExtensionContext, index: EnvFileIndex): vscode.Disposable {
     return vscode.window.registerCustomEditorProvider(
       DotenvEditorProvider.viewType,
-      new DotenvEditorProvider(context.extensionUri),
+      new DotenvEditorProvider(context.extensionUri, index),
       // Keep the GUI alive in background tabs: switching back is instant and keeps
       // scroll position, collapsed groups and revealed values.
       { webviewOptions: { retainContextWhenHidden: true } },
     );
   }
 
-  constructor(private readonly extensionUri: vscode.Uri) {}
+  constructor(
+    private readonly extensionUri: vscode.Uri,
+    private readonly index: EnvFileIndex,
+  ) {}
 
   resolveCustomTextEditor(document: vscode.TextDocument, webviewPanel: vscode.WebviewPanel): void {
     const distUri = vscode.Uri.joinPath(this.extensionUri, 'dist');
@@ -43,7 +58,7 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
       scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.js')).toString(),
       styleUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.css')).toString(),
       cspSource: webview.cspSource,
-      initialMessages: [updateMessage(document)],
+      initialMessages: [filesMessage(this.index, document), updateMessage(document)],
     });
 
     const post = (message: ToWebviewMessage): void => {
@@ -58,6 +73,7 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
         postUpdate();
       }
     });
+    const indexSubscription = this.index.onDidChange(() => post(filesMessage(this.index, document)));
     const saveSubscription = vscode.workspace.onDidSaveTextDocument((saved) => {
       if (saved.uri.toString() === document.uri.toString()) {
         post({ type: 'dirty', dirty: saved.isDirty });
@@ -66,16 +82,29 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
     webviewPanel.onDidDispose(() => {
       changeSubscription.dispose();
       saveSubscription.dispose();
+      indexSubscription.dispose();
     });
 
     webview.onDidReceiveMessage(async (message: FromWebviewMessage) => {
       switch (message.type) {
         case 'ready':
+          post(filesMessage(this.index, document));
           postUpdate();
           return;
         case 'openAsText':
           await reopenWith(document.uri, 'default');
           return;
+        case 'openFile': {
+          // Only files the dropdown offers; the webview's message is not trusted to name arbitrary paths.
+          const choice = filesMessage(this.index, document).files.find((f) => f.uri === message.uri);
+          if (choice) {
+            await vscode.commands.executeCommand('vscode.openWith', vscode.Uri.parse(choice.uri), DotenvEditorProvider.viewType, {
+              viewColumn: webviewPanel.viewColumn,
+              preview: false,
+            });
+          }
+          return;
+        }
         case 'save':
           if (!(await document.save())) {
             post({ type: 'error', message: 'The file could not be saved.' });

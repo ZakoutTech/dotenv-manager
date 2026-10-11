@@ -49,6 +49,11 @@ export function statusBarTooltip(files: EnvFile[], multiRoot: boolean, max = 10)
   return `**Dotenv Manager**: ${files.length} .env file${files.length === 1 ? '' : 's'}\n\n${lines.join('\n')}\n\nClick to select a .env file`;
 }
 
+/** Dropdown entries for sorted files, labelled `<workspace folder>/<path>` so the location is always visible. */
+export function fileChoices(files: EnvFile[], absolutePath: (uri: string) => string): Array<{ uri: string; label: string; path: string }> {
+  return files.map((f) => ({ uri: f.uri, label: `${f.folder}/${f.relativePath}`, path: absolutePath(f.uri) }));
+}
+
 export type PickerEntry =
   | { kind: 'separator'; label: string }
   | { kind: 'file'; label: string; description: string; uri: string; current: boolean };

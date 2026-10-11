@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  fileChoices,
   countVariables,
   pickerEntries,
   sortEnvFiles,
@@ -100,5 +101,19 @@ describe('countVariables', () => {
   it('counts variable definitions, ignoring comments and blank lines', () => {
     expect(countVariables('# c\nA=1\n\nexport B="x"\n# === G ===\nC=3\n')).toBe(3);
     expect(countVariables('')).toBe(0);
+  });
+});
+
+describe('fileChoices', () => {
+  const files = [
+    { uri: 'file:///w/app/.env', folder: 'app', folderIndex: 0, relativePath: '.env' },
+    { uri: 'file:///w/app/apps/api/.env.local', folder: 'app', folderIndex: 0, relativePath: 'apps/api/.env.local' },
+  ];
+
+  it('labels files with their workspace folder and path, with the absolute path for the tooltip', () => {
+    expect(fileChoices(files, (uri) => uri.replace('file://', ''))).toEqual([
+      { uri: 'file:///w/app/.env', label: 'app/.env', path: '/w/app/.env' },
+      { uri: 'file:///w/app/apps/api/.env.local', label: 'app/apps/api/.env.local', path: '/w/app/apps/api/.env.local' },
+    ]);
   });
 });

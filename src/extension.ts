@@ -66,7 +66,7 @@ export function activate(context: vscode.ExtensionContext): DotenvManagerApi {
   const tree = registerEnvFileTree(context, index);
 
   context.subscriptions.push(
-    DotenvEditorProvider.register(context),
+    DotenvEditorProvider.register(context, index),
     vscode.commands.registerCommand(
       'dotenvManager.openEditor',
       withTarget((uri) => reopenWith(uri, DotenvEditorProvider.viewType)),

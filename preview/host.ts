@@ -82,10 +82,22 @@ function setText(next: string): void {
   version++;
 }
 
+/** Stand-in for the detected files of a workspace (the preview edits only the first). */
+const FILES = ['.env', 'apps/api/.env.local', 'apps/web/.env.production'].map((relativePath) => ({
+  uri: `file:///workspace/${relativePath}`,
+  label: `workspace/${relativePath}`,
+  path: `/workspace/${relativePath}`,
+}));
+
 function handle(message: FromWebviewMessage): void {
   switch (message.type) {
     case 'ready':
+      send({ type: 'files', files: FILES, current: FILES[0].uri });
       publish();
+      return;
+    case 'openFile':
+      // VS Code would open the file in a new Dotenv Manager tab.
+      console.info('[preview] open', message.uri);
       return;
     case 'save':
       savedText = text;

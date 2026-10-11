@@ -564,3 +564,36 @@ describe('Save button', () => {
     expect(edits()).toEqual([{ type: 'sortAll' }]);
   });
 });
+
+describe('file dropdown', () => {
+  const FILES = [
+    { uri: 'file:///w/.env', label: '.env', path: '/w/.env' },
+    { uri: 'file:///w/apps/api/.env.local', label: 'apps/api/.env.local', path: '/w/apps/api/.env.local' },
+  ];
+  const select = (): HTMLSelectElement => $<HTMLSelectElement>('[data-action="select-file"]');
+
+  it('appears once the extension sends the detected files, first in the toolbar', () => {
+    expect(root.querySelector('[data-action="select-file"]')).toBeNull();
+    app.receive({ type: 'files', files: FILES, current: FILES[0].uri });
+    expect($('.toolbar').firstElementChild?.contains(select())).toBe(true);
+  });
+
+  it('lists every file by its path and selects the current one, with the full path as tooltip', () => {
+    app.receive({ type: 'files', files: FILES, current: FILES[1].uri });
+    expect([...select().options].map((o) => [o.textContent, o.title])).toEqual([
+      ['.env', '/w/.env'],
+      ['apps/api/.env.local', '/w/apps/api/.env.local'],
+    ]);
+    expect(select().value).toBe(FILES[1].uri);
+    expect(select().title).toContain('/w/apps/api/.env.local');
+  });
+
+  it('asks the extension to open the chosen file and keeps showing the current one', () => {
+    app.receive({ type: 'files', files: FILES, current: FILES[0].uri });
+    select().value = FILES[1].uri;
+    select().dispatchEvent(new Event('change', { bubbles: true }));
+    expect(posted.at(-1)).toEqual({ type: 'openFile', uri: FILES[1].uri });
+    expect(select().value).toBe(FILES[0].uri);
+    expect(edits()).toEqual([]);
+  });
+});

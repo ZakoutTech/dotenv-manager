@@ -422,15 +422,21 @@ textarea {
   overflow-wrap: anywhere;
 }
 
-/* Default editor picker */
+/* File dropdown and other toolbar selects */
 .toolbar-spacer {
   flex: 1;
 }
-.default-view {
+.file-select {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   color: var(--muted);
+}
+.file-select select {
+  max-width: 40ch;
+  text-overflow: ellipsis;
+  font-family: var(--vscode-editor-font-family);
 }
 select {
   font: inherit;
