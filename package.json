@@ -20,6 +20,7 @@
   ],
   "main": "./dist/extension.js",
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:dotenv",
     "workspaceContains:**/.env",
     "workspaceContains:**/.env.*",
@@ -56,10 +57,33 @@
             "Open .env files in the plain text editor."
           ],
           "default": "visual",
+          "order": 0,
           "markdownDescription": "Editor used when you open a `.env`, `.env.*` or `*.env` file. Dotenv Manager keeps the matching `#workbench.editorAssociations#` entries in sync with this choice. You can always switch with **Open as Text** / **Open with Dotenv Manager**."
+        },
+        "dotenvManager.statusBar.enabled": {
+          "type": "boolean",
+          "default": true,
+          "order": 1,
+          "description": "Show the Dotenv Manager item (with the number of .env files in the workspace) in the status bar."
         }
       }
     },
+    "views": {
+      "explorer": [
+        {
+          "id": "dotenvManager.files",
+          "name": "Dotenv Files",
+          "icon": "images/editor-dark.svg",
+          "contextualTitle": "Dotenv Manager"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "dotenvManager.files",
+        "contents": "No .env files found in this workspace.\n[Search again](command:dotenvManager.refreshEnvFiles)"
+      }
+    ],
     "commands": [
       {
         "command": "dotenvManager.openEditor",
@@ -82,6 +106,18 @@
         "category": "Dotenv Manager"
       },
       {
+        "command": "dotenvManager.selectEnvFile",
+        "title": "Select .env File",
+        "category": "Dotenv Manager",
+        "icon": "$(list-selection)"
+      },
+      {
+        "command": "dotenvManager.refreshEnvFiles",
+        "title": "Refresh .env Files",
+        "category": "Dotenv Manager",
+        "icon": "$(refresh)"
+      },
+      {
         "command": "dotenvManager.sortAll",
         "title": "Sort All Groups A→Z",
         "category": "Dotenv Manager"
@@ -100,6 +136,45 @@
         {
           "command": "dotenvManager.sortAll",
           "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/ || activeCustomEditorId == 'dotenvManager.editor'"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "dotenvManager.selectEnvFile",
+          "when": "view == dotenvManager.files",
+          "group": "navigation@1"
+        },
+        {
+          "command": "dotenvManager.refreshEnvFiles",
+          "when": "view == dotenvManager.files",
+          "group": "navigation@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "dotenvManager.openEditor",
+          "when": "view == dotenvManager.files && viewItem == dotenvManager.envFile",
+          "group": "inline@1"
+        },
+        {
+          "command": "dotenvManager.openText",
+          "when": "view == dotenvManager.files && viewItem == dotenvManager.envFile",
+          "group": "inline@2"
+        },
+        {
+          "command": "dotenvManager.openEditor",
+          "when": "view == dotenvManager.files && viewItem == dotenvManager.envFile",
+          "group": "1_open@1"
+        },
+        {
+          "command": "dotenvManager.openText",
+          "when": "view == dotenvManager.files && viewItem == dotenvManager.envFile",
+          "group": "1_open@2"
+        },
+        {
+          "command": "dotenvManager.sortAll",
+          "when": "view == dotenvManager.files && viewItem == dotenvManager.envFile",
+          "group": "2_edit"
         }
       ],
       "explorer/context": [
