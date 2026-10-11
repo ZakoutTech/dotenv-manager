@@ -85,7 +85,7 @@
     "pretest:integration": "npm run build && tsc -p tsconfig.integration.json",
     "test:integration": "vscode-test",
     "vscode:prepublish": "node esbuild.mjs --production",
-    "package": "vsce package"
+    "package": "vsce package --allow-missing-repository --no-rewrite-relative-links"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -358,7 +358,7 @@ describe('references', () => {
     expect(row(0, 0).querySelector('.resolved')).toBeNull();
     expect($('.resolved', row(0, 1)).textContent).not.toContain('123');
     $('[data-action="reveal-all"]').click();
-    expect($('.resolved', row(0, 1)).textContent).toBe('→ 123');
+    expect($('.resolved', row(0, 1)).textContent).toBe('→\u00a0123');
   });
 
   it('shows reference warnings', () => {

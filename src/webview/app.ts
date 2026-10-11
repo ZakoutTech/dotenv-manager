@@ -369,7 +369,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         ? h(
             'span',
             { class: 'resolved', title: revealed ? `Resolves to: ${entry.resolved ?? ''}` : 'Resolved value (hidden)' },
-            `→ ${revealed ? entry.resolved ?? '' : MASK}`,
+            `→\u00a0${revealed ? entry.resolved ?? '' : MASK}`,
           )
         : null;
 

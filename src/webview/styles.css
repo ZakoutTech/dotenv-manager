@@ -376,3 +376,17 @@ textarea {
 .group.ungrouped .empty-hint {
   margin-left: 32px;
 }
+
+/* Keep values whole where possible; let the resolved preview take the remaining space. */
+.value {
+  flex: 0 0 auto;
+  max-width: 50%;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+.resolved {
+  flex: 0 1 auto;
+  min-width: 0;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
