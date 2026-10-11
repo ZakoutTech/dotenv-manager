@@ -52,6 +52,22 @@ suite('Dotenv Manager extension', () => {
     assert.strictEqual(titleItem.group, 'navigation');
   });
 
+  test('offers "Open with Dotenv Manager" in the Explorer and tab context menus for .env files', () => {
+    const menus = vscode.extensions.getExtension(EXTENSION_ID)?.packageJSON.contributes.menus;
+    for (const menu of ['explorer/context', 'editor/title/context']) {
+      const item = menus[menu]?.find((m: { command: string }) => m.command === 'dotenvManager.openEditor');
+      assert.ok(item, `${menu} should contain the command`);
+      assert.match(item.when, /resourceFilename/);
+    }
+  });
+
+  test('"Open with Dotenv Manager" opens the file it is invoked on (Explorer context menu)', async () => {
+    await vscode.commands.executeCommand('dotenvManager.openEditor', fixtureUri('sample.env'));
+    assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);
+    const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input as vscode.TabInputCustom;
+    assert.strictEqual(path.basename(input.uri.fsPath), 'sample.env');
+  });
+
   test('opens a .env file in the Dotenv Manager editor via vscode.openWith', async () => {
     await vscode.commands.executeCommand('vscode.openWith', fixtureUri('sample.env'), VIEW_TYPE);
     assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);

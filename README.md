@@ -23,9 +23,10 @@ A visual editor for `.env` files in VS Code. Organize variables into commented g
 
 Open a `.env`, `.env.*` or `*.env` file, then either:
 
-- click the **Open with Dotenv Manager** button in the editor title bar,
+- right-click it in the **Explorer** and choose **Open with Dotenv Manager**,
+- click the **Open with Dotenv Manager** button (the **E** icon) in the editor title bar,
 - run **Dotenv Manager: Open with Dotenv Manager** from the Command Palette, or
-- right-click the tab and choose **Reopen Editor With… → Dotenv Manager**.
+- right-click the editor tab and choose **Open with Dotenv Manager** (or **Reopen Editor With… → Dotenv Manager**).
 
 To make Dotenv Manager the default editor for these files, choose **Configure default editor for…** in the same **Reopen Editor With…** list.
 
@@ -82,9 +83,11 @@ npm test                 # unit tests (Vitest)
 npm run test:integration # integration tests in a downloaded VS Code
 npm run lint
 npm run package          # build a .vsix
+npm run preview          # GUI in the browser at http://127.0.0.1:5178/
 ```
 
-Press <kbd>F5</kbd> (**Run Extension**) to start an Extension Development Host with the `test/fixtures` workspace.
+- **In VS Code:** press <kbd>F5</kbd> (**Run Extension**) to start an Extension Development Host with the `test/fixtures` workspace. Keep `npm run watch` running and use **Developer: Reload Webviews** to pick up GUI changes, or **Developer: Open Webview Developer Tools** to inspect them.
+- **In a browser:** `npm run preview` serves the GUI with a fake extension host (`preview/host.ts`) that runs the real parse → edit → serialize code against a sample file. The right pane shows the resulting `.env` text and is editable, and there are Undo/Redo, Reset and a light/dark theme toggle. Saving files under `src/` rebuilds and reloads the page. Set `PORT` to change the port.
 
 ## License
 
