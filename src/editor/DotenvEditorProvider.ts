@@ -11,7 +11,7 @@ import { createNonce, getWebviewHtml } from './webviewHtml';
 
 function updateMessage(document: vscode.TextDocument): ToWebviewMessage {
   const text = document.getText();
-  return { type: 'update', version: document.version, doc: toViewDocument(parse(text)), text };
+  return { type: 'update', version: document.version, doc: toViewDocument(parse(text)), text, dirty: document.isDirty };
 }
 
 /**
@@ -68,9 +68,15 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
         postSettings();
       }
     });
+    const saveSubscription = vscode.workspace.onDidSaveTextDocument((saved) => {
+      if (saved.uri.toString() === document.uri.toString()) {
+        post({ type: 'dirty', dirty: saved.isDirty });
+      }
+    });
     webviewPanel.onDidDispose(() => {
       changeSubscription.dispose();
       configSubscription.dispose();
+      saveSubscription.dispose();
     });
 
     webview.onDidReceiveMessage(async (message: FromWebviewMessage) => {
@@ -84,6 +90,11 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
           return;
         case 'openAsText':
           await reopenWith(document.uri, 'default');
+          return;
+        case 'save':
+          if (!(await document.save())) {
+            post({ type: 'error', message: 'The file could not be saved.' });
+          }
           return;
         case 'edit':
           if (message.version !== document.version) {

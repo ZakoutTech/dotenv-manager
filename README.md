@@ -74,6 +74,7 @@ Dotenv Manager applies the choice by adding one `workbench.editorAssociations` e
 | Add a group | **+ Group** in the toolbar |
 | Move a variable or group | Drag the ⠿ handle, or <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd> |
 | Sort | **Sort A→Z** on a group, **Sort all A→Z** in the toolbar |
+| Save the file | **Save** at the left of the toolbar (enabled when there are unsaved changes), or Ctrl/Cmd+S |
 | See the file text beside the GUI | Tick **Preview** in the toolbar |
 | Comment out / uncomment a variable | **Comment out** or **Uncomment** on the row. Tick **Show commented (n)** to see commented-out variables. |
 | Delete a group | **Delete** on the group card. You can keep its variables; they move to the group above. |

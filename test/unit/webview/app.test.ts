@@ -552,3 +552,30 @@ describe('text preview pane', () => {
     expect($$('[data-group]').length).toBeGreaterThan(0);
   });
 });
+
+describe('Save button', () => {
+  const save = (): HTMLButtonElement => $<HTMLButtonElement>('[data-action="save"]');
+
+  it('sits to the left of "+ Group" and is disabled without unsaved changes', () => {
+    expect(save().nextElementSibling?.getAttribute('data-action')).toBe('add-group');
+    expect(save().disabled).toBe(true);
+  });
+
+  it('is enabled by unsaved changes and asks the extension to save', () => {
+    app.receive({ type: 'update', version: 2, doc: DOC, dirty: true });
+    expect(save().disabled).toBe(false);
+    expect(save().classList.contains('primary')).toBe(true);
+    save().click();
+    expect(posted.at(-1)).toEqual({ type: 'save' });
+  });
+
+  it('turns off again after the save, without touching the edit queue', () => {
+    app.receive({ type: 'update', version: 2, doc: DOC, dirty: true });
+    $('[data-action="sort-all"]').click();
+    app.receive({ type: 'dirty', dirty: false });
+    expect(save().disabled).toBe(true);
+    $('[data-action="sort-all"]').click();
+    // The second edit waits for the update answering the first one.
+    expect(edits()).toEqual([{ type: 'sortAll' }]);
+  });
+});

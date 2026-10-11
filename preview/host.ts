@@ -36,6 +36,8 @@ NODE_ENV=test
 const STORAGE_KEY = 'dotenv-manager-preview-text';
 
 let text = load();
+/** Text as last "saved" (the preview has no disk; Save just marks the current text as saved). */
+let savedText = text;
 let version = 1;
 const undoStack: string[] = [];
 const redoStack: string[] = [];
@@ -67,7 +69,7 @@ function publish(): void {
   }
   undoButton.disabled = undoStack.length === 0;
   redoButton.disabled = redoStack.length === 0;
-  send({ type: 'update', version, doc: toViewDocument(parse(text)), text });
+  send({ type: 'update', version, doc: toViewDocument(parse(text)), text, dirty: text !== savedText });
 }
 
 /** Replace the document text, recording an undo step (like one WorkspaceEdit). */
@@ -92,6 +94,10 @@ function handle(message: FromWebviewMessage): void {
     case 'setDefaultView':
       defaultView = message.view;
       send({ type: 'settings', defaultView });
+      return;
+    case 'save':
+      savedText = text;
+      send({ type: 'dirty', dirty: false });
       return;
     case 'openAsText':
       // The text pane plays the role of the text editor here.

@@ -33,6 +33,8 @@ interface State {
   showPreview: boolean;
   /** Current document text (for the preview pane). */
   text?: string;
+  /** The document has unsaved changes. */
+  dirty: boolean;
   editing?: Editing;
   /** In-progress text of the open editor(s), keyed by field name (`text` for single-field editors). */
   draft: Record<string, string>;
@@ -84,7 +86,7 @@ export interface App {
 
 export function createApp(root: HTMLElement, post: (message: FromWebviewMessage) => void): App {
   const queue = new EditQueue(post);
-  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), showDisabled: false, showPreview: false, draft: {} };
+  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), showDisabled: false, showPreview: false, dirty: false, draft: {} };
   let rendering = false;
 
   const dispatch = (intent: EditIntent): void => queue.submit(intent);
@@ -840,6 +842,15 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       h(
         'div',
         { class: 'toolbar', role: 'toolbar', 'aria-label': 'Dotenv Manager' },
+        on(
+          button('Save', 'save', 'save', {
+            class: state.dirty ? 'primary' : undefined,
+            disabled: !state.dirty,
+            title: state.dirty ? 'Save the file (Ctrl/Cmd+S)' : 'No unsaved changes',
+          }),
+          'click',
+          () => post({ type: 'save' }),
+        ),
         on(button('+ Group', 'add-group', 'add-group', { class: 'primary' }), 'click', () => startEditing({ kind: 'newGroup' }, {})),
         on(button('Sort all A→Z', 'sort-all', 'sort-all', { title: 'Sort the variables of every group alphabetically' }), 'click', () =>
           dispatch({ type: 'sortAll' }),
@@ -933,6 +944,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         render();
         return;
       }
+      if (message.type === 'dirty') {
+        state.dirty = message.dirty;
+        render();
+        return;
+      }
       if (message.type !== 'update') {
         state.error = message.message;
         queue.failed();
@@ -942,6 +958,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       state.version = message.version;
       state.doc = message.doc;
       state.text = message.text ?? state.text;
+      state.dirty = message.dirty ?? state.dirty;
       reconcileEditing();
       const focusId = state.focusNext;
       state.focusNext = undefined;

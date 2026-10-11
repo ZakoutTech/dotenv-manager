@@ -69,7 +69,9 @@ export interface ViewDocument {
 
 export type ToWebviewMessage =
   /** `text` is the document text, for the read-only preview pane. */
-  | { type: 'update'; version: number; doc: ViewDocument; text?: string }
+  | { type: 'update'; version: number; doc: ViewDocument; text?: string; dirty?: boolean }
+  /** Unsaved-changes state changed without a text change (saved or reverted to disk). */
+  | { type: 'dirty'; dirty: boolean }
   | { type: 'error'; message: string }
   | { type: 'settings'; defaultView: DefaultView };
 
@@ -77,4 +79,5 @@ export type FromWebviewMessage =
   | { type: 'ready' }
   | { type: 'edit'; version: number; intent: EditIntent }
   | { type: 'setDefaultView'; view: DefaultView }
-  | { type: 'openAsText' };
+  | { type: 'openAsText' }
+  | { type: 'save' };

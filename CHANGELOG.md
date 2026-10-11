@@ -16,5 +16,6 @@ Initial release.
 - Status bar item **Dotenv Manager (n)** with a quick pick of all `.env` files in the workspace, and a **Dotenv Files** view in the Explorer; detection is recursive, skips dependency/build folders and updates live.
 - **Create .env File…** from the selector, the Dotenv Files view or a folder's Explorer context menu (never overwrites), and the `dotenvManager.exclude` glob setting for detection.
 - Commented-out variables (`# KEY=value`): shown on demand with **Show commented (n)**, and switched with **Comment out** / **Uncomment** on each row.
+- **Save** button at the start of the toolbar, enabled while the file has unsaved changes.
 - **Preview** toolbar checkbox: shows the highlighted .env text in a read-only pane to the right, following **Show values**.
 - Lossless round-trip: lines you don't edit are written back exactly as they were.
