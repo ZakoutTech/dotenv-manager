@@ -22,6 +22,9 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
     return vscode.window.registerCustomEditorProvider(
       DotenvEditorProvider.viewType,
       new DotenvEditorProvider(context.extensionUri),
+      // Keep the GUI alive in background tabs: switching back is instant and keeps
+      // scroll position, collapsed groups and revealed values.
+      { webviewOptions: { retainContextWhenHidden: true } },
     );
   }
 
@@ -36,6 +39,10 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
       scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.js')).toString(),
       styleUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.css')).toString(),
       cspSource: webview.cspSource,
+      initialMessages: [
+        { type: 'settings', defaultView: getDefaultView() },
+        { type: 'update', version: document.version, doc: toViewDocument(parse(document.getText())) },
+      ],
     });
 
     const post = (message: ToWebviewMessage): void => {

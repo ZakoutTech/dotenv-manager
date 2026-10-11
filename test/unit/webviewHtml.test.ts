@@ -36,6 +36,27 @@ describe('getWebviewHtml', () => {
   });
 });
 
+describe('getWebviewHtml initial state', () => {
+  const base = { nonce: 'n', scriptUri: 's', styleUri: 'c', cspSource: 'x' };
+
+  it('embeds initial messages as non-executable JSON', () => {
+    const html = getWebviewHtml({ ...base, initialMessages: [{ type: 'settings', defaultView: 'text' }] });
+    const json = /<script type="application\/json" id="initial-state">(.*?)<\/script>/s.exec(html)?.[1];
+    expect(JSON.parse(json ?? 'null')).toEqual([{ type: 'settings', defaultView: 'text' }]);
+  });
+
+  it('escapes file content so it cannot close the script tag', () => {
+    const html = getWebviewHtml({ ...base, initialMessages: [{ type: 'error', message: '</script><img src=x onerror=alert(1)>' }] });
+    expect(html).not.toContain('</script><img');
+    const json = /<script type="application\/json" id="initial-state">(.*?)<\/script>/s.exec(html)?.[1];
+    expect(JSON.parse(json ?? 'null')[0].message).toBe('</script><img src=x onerror=alert(1)>');
+  });
+
+  it('omits the state block when there is nothing to embed', () => {
+    expect(getWebviewHtml(base)).not.toContain('initial-state');
+  });
+});
+
 describe('createNonce', () => {
   it('returns a 32-character alphanumeric string', () => {
     expect(createNonce()).toMatch(/^[A-Za-z0-9]{32}$/);

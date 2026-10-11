@@ -1,3 +1,5 @@
+import type { ToWebviewMessage } from '../shared/protocol';
+
 export interface WebviewHtmlOptions {
   /** Per-render nonce that whitelists our script in the CSP. */
   nonce: string;
@@ -7,6 +9,8 @@ export interface WebviewHtmlOptions {
   styleUri: string;
   /** webview.cspSource, used to allow our own styles. */
   cspSource: string;
+  /** Messages applied before the first paint, so the editor never shows empty while waiting for data. */
+  initialMessages?: ToWebviewMessage[];
 }
 
 const NONCE_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -24,7 +28,20 @@ function escapeAttr(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export function getWebviewHtml({ nonce, scriptUri, styleUri, cspSource }: WebviewHtmlOptions): string {
+/** JSON that is safe inside a <script> element (cannot close the tag or start a comment). */
+function scriptSafeJson(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+export function getWebviewHtml({ nonce, scriptUri, styleUri, cspSource, initialMessages }: WebviewHtmlOptions): string {
+  const initialState = initialMessages?.length
+    ? `<script type="application/json" id="initial-state">${scriptSafeJson(initialMessages)}</script>\n  `
+    : '';
   const n = escapeAttr(nonce);
   const csp = [
     "default-src 'none'",
@@ -43,7 +60,7 @@ export function getWebviewHtml({ nonce, scriptUri, styleUri, cspSource }: Webvie
 </head>
 <body>
   <div id="app"></div>
-  <script nonce="${n}" src="${escapeAttr(scriptUri)}"></script>
+  ${initialState}<script nonce="${n}" src="${escapeAttr(scriptUri)}"></script>
 </body>
 </html>`;
 }
