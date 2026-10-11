@@ -1,0 +1,80 @@
+{
+  "name": "dotenv-manager",
+  "displayName": "Dotenv Manager",
+  "description": "Visual editor for .env files: groups, comments, drag-and-drop ordering, alphabetical sorting and ${VAR} references.",
+  "version": "0.0.1",
+  "publisher": "zakout",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.100.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "dotenv",
+    "env",
+    ".env",
+    "environment variables"
+  ],
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "dotenvManager.editor",
+        "displayName": "Dotenv Manager",
+        "selector": [
+          { "filenamePattern": ".env" },
+          { "filenamePattern": "*.env" },
+          { "filenamePattern": ".env.*" }
+        ],
+        "priority": "option"
+      }
+    ],
+    "commands": [
+      {
+        "command": "dotenvManager.openEditor",
+        "title": "Open with Dotenv Manager",
+        "category": "Dotenv Manager"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "dotenvManager.openEditor",
+          "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/ && activeCustomEditorId != 'dotenvManager.editor'",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint src test",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "pretest:integration": "npm run build && tsc -p tsconfig.integration.json",
+    "test:integration": "vscode-test",
+    "vscode:prepublish": "node esbuild.mjs --production",
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.19.2",
+    "@types/vscode": "~1.100.0",
+    "@vitest/coverage-v8": "^5.0.3",
+    "@vscode/test-cli": "^0.0.15",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^4.0.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.12.0",
+    "mocha": "^11.8.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.1",
+    "vitest": "^5.0.3"
+  }
+}
