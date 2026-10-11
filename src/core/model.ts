@@ -23,6 +23,8 @@ export interface EnvEntry {
   inlineComment?: string;
   /** Original source text (may span several lines for multiline values). */
   raw?: string;
+  /** 0-based line of the entry in the parsed source (set by the parser only). */
+  line?: number;
 }
 
 /** Comment lines not attached to a variable (followed by a blank or unknown line). */

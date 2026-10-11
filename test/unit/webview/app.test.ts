@@ -328,6 +328,85 @@ describe('keyboard moves', () => {
   });
 });
 
+describe('references', () => {
+  const REFS: ViewDocument = {
+    groups: [
+      {
+        name: null,
+        comment: '',
+        entries: [
+          { key: 'X', value: '123', quote: '', exported: false, comment: '' },
+          { key: 'Y', value: '${X}', quote: '', exported: false, comment: '', references: ['X'], resolved: '123' },
+          {
+            key: 'Z',
+            value: '${NOPE}',
+            quote: '',
+            exported: false,
+            comment: '',
+            references: ['NOPE'],
+            resolved: '',
+            warnings: ['Undefined variable NOPE'],
+          },
+        ],
+      },
+    ],
+  };
+
+  beforeEach(() => app.receive({ type: 'update', version: 2, doc: REFS }));
+
+  it('shows the resolved value next to values with references, masked like the value', () => {
+    expect(row(0, 0).querySelector('.resolved')).toBeNull();
+    expect($('.resolved', row(0, 1)).textContent).not.toContain('123');
+    $('[data-action="reveal-all"]').click();
+    expect($('.resolved', row(0, 1)).textContent).toBe('→ 123');
+  });
+
+  it('shows reference warnings', () => {
+    expect($('.warning', row(0, 2)).textContent).toContain('Undefined variable NOPE');
+    expect(row(0, 1).querySelector('.warning')).toBeNull();
+  });
+
+  it('suggests keys after ${ and inserts the chosen one', () => {
+    $('[data-action="edit-value"]', row(0, 1)).click();
+    type(editor(), 'a ${');
+    expect($$('.completions [role="option"]').map((o) => o.textContent)).toEqual(['X', 'Z']);
+    key(editor(), 'ArrowDown');
+    key(editor(), 'Enter');
+    expect(editor().value).toBe('a ${Z}');
+    expect(root.querySelector('.completions')).toBeNull();
+    expect(edits()).toEqual([]);
+
+    key(editor(), 'Enter');
+    expect(edits()).toEqual([{ type: 'updateVariable', ref: { group: 0, index: 1 }, changes: { value: 'a ${Z}' } }]);
+  });
+
+  it('closes suggestions with Escape without cancelling the edit', () => {
+    $('[data-action="edit-value"]', row(0, 1)).click();
+    type(editor(), '${');
+    key(editor(), 'Escape');
+    expect(root.querySelector('.completions')).toBeNull();
+    expect(root.querySelector('.inline-editor')).not.toBeNull();
+  });
+
+  it('asks whether to update references when renaming a referenced variable', () => {
+    $('[data-action="edit-key"]', row(0, 0)).click();
+    type(editor(), 'X2');
+    key(editor(), 'Enter');
+    expect(edits()).toEqual([]);
+    expect($('.confirm', row(0, 0)).textContent).toContain('1 variable references X');
+    $('[data-action="rename-update"]', row(0, 0)).click();
+    expect(edits()).toEqual([{ type: 'renameVariable', ref: { group: 0, index: 0 }, key: 'X2', updateReferences: true }]);
+  });
+
+  it('can rename without updating references', () => {
+    $('[data-action="edit-key"]', row(0, 0)).click();
+    type(editor(), 'X2');
+    key(editor(), 'Enter');
+    $('[data-action="rename-only"]', row(0, 0)).click();
+    expect(edits()).toEqual([{ type: 'renameVariable', ref: { group: 0, index: 0 }, key: 'X2', updateReferences: false }]);
+  });
+});
+
 describe('sync', () => {
   it('sends edits with the latest document version', () => {
     app.receive({ type: 'update', version: 7, doc: DOC });

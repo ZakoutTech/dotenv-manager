@@ -18,7 +18,12 @@
     "environment variables"
   ],
   "main": "./dist/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:dotenv",
+    "workspaceContains:**/.env",
+    "workspaceContains:**/.env.*",
+    "workspaceContains:**/*.env"
+  ],
   "contributes": {
     "customEditors": [
       {

@@ -57,3 +57,12 @@ describe('toViewDocument', () => {
     });
   });
 });
+
+describe('toViewDocument references', () => {
+  it('adds resolved values and warnings only for values with references', () => {
+    const [x, y, z] = toViewDocument(parse('X=123\nY=${X}\nZ=${NOPE}\n')).groups[0].entries;
+    expect(x).not.toHaveProperty('resolved');
+    expect(y).toMatchObject({ references: ['X'], resolved: '123' });
+    expect(z).toMatchObject({ references: ['NOPE'], resolved: '', warnings: ['Undefined variable NOPE'] });
+  });
+});

@@ -9,12 +9,13 @@ import type {
 import { groupNameError, keyError } from '../shared/validation';
 import { groupDrop, keyboardGroupMove, keyboardVariableMove, variableDrop } from './dnd';
 import type { VariableMove, VariablePosition } from './dnd';
+import { attachCompletion } from './completion';
 import { EditQueue } from './editQueue';
 
 type FieldKind = 'key' | 'value' | 'comment';
 
 type Editing =
-  | { kind: FieldKind; group: number; index: number }
+  | { kind: FieldKind | 'renameRefs'; group: number; index: number }
   | { kind: 'groupName' | 'groupComment' | 'deleteGroup' | 'newVariable'; group: number }
   | { kind: 'newGroup' };
 
@@ -174,6 +175,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
           if (error) {
             return fail(error);
           }
+          if (text !== entry.key && referencingCount(entry.key, editing.group, editing.index) > 0) {
+            state.editing = { kind: 'renameRefs', group: editing.group, index: editing.index };
+            state.fieldError = undefined;
+            return render();
+          }
         }
         if (text !== entry[editing.kind]) {
           dispatch({
@@ -226,12 +232,34 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         return stopEditing();
       }
       case 'deleteGroup':
+      case 'renameRefs':
         return stopEditing();
     }
   }
 
+  /** Number of other variables whose value references `key`. */
+  function referencingCount(key: string, group: number, index: number): number {
+    let count = 0;
+    state.doc?.groups.forEach((g, gi) =>
+      g.entries.forEach((e, ei) => {
+        if ((gi !== group || ei !== index) && e.references?.includes(key)) {
+          count++;
+        }
+      }),
+    );
+    return count;
+  }
+
+  function allKeys(): string[] {
+    return state.doc?.groups.flatMap((g) => g.entries.map((e) => e.key)) ?? [];
+  }
+
   /** Single-field inline editor: Enter saves, Shift+Enter adds a line (textarea), Escape cancels, blur saves. */
-  function inlineEditor(multiline: boolean, label: string): HTMLInputElement | HTMLTextAreaElement {
+  function inlineEditor(
+    multiline: boolean,
+    label: string,
+    completion?: { keys: string[]; exclude: string },
+  ): HTMLInputElement | HTMLTextAreaElement {
     const editing = state.editing;
     const text = state.draft.text ?? '';
     const el = multiline ? h('textarea', { rows: String(Math.max(1, text.split('\n').length)) }) : h('input', { type: 'text' });
@@ -241,6 +269,10 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     el.setAttribute('data-autofocus', '');
     if (state.fieldError) {
       el.setAttribute('aria-invalid', 'true');
+    }
+    if (completion) {
+      // Registered first so an open suggestion list owns Enter/Escape/arrows.
+      attachCompletion(el, completion.keys, completion.exclude);
     }
     on(el, 'input', () => {
       state.draft.text = el.value;
@@ -298,7 +330,8 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
   function renderRow(entry: ViewEntry, g: number, i: number, duplicates: Set<string>): HTMLElement {
     const id = rowId(g, i);
     const revealed = state.revealAll || state.revealed.has(id);
-    const editingRow = isEditing('key', g, i) || isEditing('value', g, i) || isEditing('comment', g, i);
+    const editingRow =
+      isEditing('key', g, i) || isEditing('value', g, i) || isEditing('comment', g, i) || isEditing('renameRefs', g, i);
 
     let comment: Child = null;
     if (isEditing('comment', g, i)) {
@@ -317,7 +350,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
     let value: HTMLElement;
     if (isEditing('value', g, i)) {
-      value = inlineEditor(true, `Value of ${entry.key}`);
+      value = inlineEditor(true, `Value of ${entry.key}`, { keys: allKeys(), exclude: entry.key });
     } else {
       const shown = entry.value === '' ? '(empty)' : revealed ? entry.value : MASK;
       value = on(
@@ -328,6 +361,39 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         }),
         'click',
         () => startEditing({ kind: 'value', group: g, index: i }, { text: entry.value }),
+      );
+    }
+
+    const resolved =
+      entry.references && !isEditing('value', g, i)
+        ? h(
+            'span',
+            { class: 'resolved', title: revealed ? `Resolves to: ${entry.resolved ?? ''}` : 'Resolved value (hidden)' },
+            `→ ${revealed ? entry.resolved ?? '' : MASK}`,
+          )
+        : null;
+
+    const warnings = entry.warnings?.length
+      ? h('div', { class: 'warning', role: 'note' }, `⚠ ${entry.warnings.join('; ')}`)
+      : null;
+
+    let renamePrompt: Child = null;
+    if (isEditing('renameRefs', g, i)) {
+      const newKey = state.draft.text ?? '';
+      const count = referencingCount(entry.key, g, i);
+      const rename = (updateReferences: boolean): void => {
+        dispatch({ type: 'renameVariable', ref: { group: g, index: i }, key: newKey, updateReferences });
+        stopEditing();
+      };
+      renamePrompt = h(
+        'div',
+        { class: 'confirm', role: 'alert' },
+        h('span', {}, `${count} variable${count === 1 ? '' : 's'} reference${count === 1 ? 's' : ''} ${entry.key}. Rename to ${newKey}:`),
+        on(button('Rename and update references', 'rename-update', `rename-update-${id}`, { class: 'primary', 'data-autofocus': true }), 'click', () =>
+          rename(true),
+        ),
+        on(button('Rename only', 'rename-only', `rename-only-${id}`), 'click', () => rename(false)),
+        on(button('Cancel', 'cancel', `rename-cancel-${id}`), 'click', stopEditing),
       );
     }
 
@@ -376,6 +442,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         key,
         h('span', { class: 'eq', 'aria-hidden': 'true' }, '='),
         value,
+        resolved,
         reveal,
         h('label', { class: 'export', title: 'Prefix with export' }, exportBox, 'export'),
         duplicates.has(entry.key)
@@ -392,6 +459,8 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
           ),
         ),
       ),
+      warnings,
+      renamePrompt,
       editingRow ? fieldError() : null,
     );
 

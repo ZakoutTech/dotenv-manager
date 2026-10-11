@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parse } from '../../src/core/parse';
-import { findReferences, resolve } from '../../src/core/resolve';
+import { findReferences, resolve, resolveEntries } from '../../src/core/resolve';
 
 const resolved = (text: string): Record<string, string> =>
   Object.fromEntries([...resolve(parse(text))].map(([key, r]) => [key, r.value]));
@@ -96,6 +96,18 @@ describe('findReferences', () => {
       { name: 'Y', start: 6, end: 8 },
       { name: 'W', start: 11, end: 21 },
       { name: 'V', start: 16, end: 20 },
+    ]);
+  });
+});
+
+describe('resolveEntries', () => {
+  it('resolves earlier duplicate definitions with their own value', () => {
+    const doc = parse('X=1\nA=${X}a\nA=${X}b\n');
+    const values = [...resolveEntries(doc).entries()].map(([entry, r]) => [entry.key, r.value]);
+    expect(values).toEqual([
+      ['X', '1'],
+      ['A', '1a'],
+      ['A', '1b'],
     ]);
   });
 });

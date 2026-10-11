@@ -25,6 +25,7 @@ export interface VariableChanges {
 export type EditIntent =
   | { type: 'addVariable'; group: number; key: string; value: string; comment?: string; index?: number }
   | { type: 'updateVariable'; ref: EntryRef; changes: VariableChanges }
+  | { type: 'renameVariable'; ref: EntryRef; key: string; updateReferences: boolean }
   | { type: 'deleteVariable'; ref: EntryRef }
   | { type: 'moveVariable'; ref: EntryRef; toGroup: number; toIndex: number }
   | { type: 'addGroup'; name: string; comment?: string }
@@ -42,6 +43,12 @@ export interface ViewEntry {
   exported: boolean;
   comment: string;
   inlineComment?: string;
+  /** Names referenced by the value (present only when there are references). */
+  references?: string[];
+  /** Expanded value (present only when the value has references). */
+  resolved?: string;
+  /** Reference problems, e.g. undefined variables or cycles. */
+  warnings?: string[];
 }
 
 export interface ViewGroup {

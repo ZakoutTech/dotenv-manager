@@ -141,26 +141,52 @@ export function findReferences(value: string): ReferenceSpan[] {
   return collectSpans(parseTemplate(value), []);
 }
 
+const BARE_SAFE_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+
+/** Rewrite references to `from` so they point at `to` (escaped `\$` and other names are untouched). */
+export function renameReferences(value: string, from: string, to: string): string {
+  const spans = findReferences(value)
+    .filter((span) => span.name === from)
+    .sort((a, b) => b.start - a.start);
+  let out = value;
+  for (const span of spans) {
+    if (out[span.start + 1] === '{') {
+      const at = span.start + 2;
+      out = out.slice(0, at) + to + out.slice(at + from.length);
+    } else {
+      out = out.slice(0, span.start) + (BARE_SAFE_RE.test(to) ? `$${to}` : `\${${to}}`) + out.slice(span.end);
+    }
+  }
+  return out;
+}
+
 export function isExpandable(entry: EnvEntry): boolean {
   return entry.quote !== "'";
 }
 
-export function resolve(doc: EnvDocument): Map<string, Resolution> {
+function allEntries(doc: EnvDocument): EnvEntry[] {
+  return doc.groups.flatMap((group) => group.items.filter((item): item is EnvEntry => item.type === 'entry'));
+}
+
+interface Resolver {
+  /** Resolution of each key's effective (last) definition. */
+  byKey: Map<string, Resolution>;
+  /** Resolution of one specific entry (earlier duplicates included). */
+  resolveEntry(entry: EnvEntry): Resolution;
+}
+
+function createResolver(doc: EnvDocument): Resolver {
   const defined = new Map<string, EnvEntry>();
-  for (const group of doc.groups) {
-    for (const item of group.items) {
-      if (item.type === 'entry') {
-        defined.set(item.key, item);
-      }
-    }
+  for (const entry of allEntries(doc)) {
+    defined.set(entry.key, entry);
   }
 
-  const results = new Map<string, Resolution>();
+  const byKey = new Map<string, Resolution>();
   const visiting: string[] = [];
   const cycles = new Map<string, string[]>();
 
   const resolveKey = (key: string): string => {
-    const done = results.get(key);
+    const done = byKey.get(key);
     if (done) {
       return done.value;
     }
@@ -174,58 +200,66 @@ export function resolve(doc: EnvDocument): Map<string, Resolution> {
       });
       return '';
     }
-
-    const entry = defined.get(key) as EnvEntry;
-    const diagnostics: ResolveDiagnostic[] = [];
-    let value = entry.value;
-    let references: string[] = [];
-
-    if (isExpandable(entry)) {
-      visiting.push(key);
-      const segments = parseTemplate(entry.value);
-      references = collectSpans(segments, []).map((s) => s.name);
-
-      const render = (segs: Segment[]): string =>
-        segs
-          .map((seg) => {
-            if (seg.kind === 'text') {
-              return seg.text;
-            }
-            const isDefined = defined.has(seg.name);
-            const current = isDefined ? resolveKey(seg.name) : undefined;
-            if (seg.op === ':-' && !current) {
-              return render(seg.fallback ?? []);
-            }
-            if (seg.op === '-' && !isDefined) {
-              return render(seg.fallback ?? []);
-            }
-            if (!isDefined) {
-              diagnostics.push({ kind: 'undefined', key, ref: seg.name, message: `Undefined variable ${seg.name}` });
-            }
-            return current ?? '';
-          })
-          .join('');
-
-      value = render(segments);
-      visiting.pop();
-    }
-
-    results.set(key, { value, references, diagnostics });
-    return value;
+    const resolution = expand(defined.get(key) as EnvEntry);
+    byKey.set(key, resolution);
+    return resolution.value;
   };
+
+  function expand(entry: EnvEntry): Resolution {
+    const { key } = entry;
+    if (!isExpandable(entry)) {
+      return { value: entry.value, references: [], diagnostics: [] };
+    }
+    const diagnostics: ResolveDiagnostic[] = [];
+    const segments = parseTemplate(entry.value);
+
+    const render = (segs: Segment[]): string =>
+      segs
+        .map((seg) => {
+          if (seg.kind === 'text') {
+            return seg.text;
+          }
+          const isDefined = defined.has(seg.name);
+          const current = isDefined ? resolveKey(seg.name) : undefined;
+          if (seg.op === ':-' && !current) {
+            return render(seg.fallback ?? []);
+          }
+          if (seg.op === '-' && !isDefined) {
+            return render(seg.fallback ?? []);
+          }
+          if (!isDefined) {
+            diagnostics.push({ kind: 'undefined', key, ref: seg.name, message: `Undefined variable ${seg.name}` });
+          }
+          return current ?? '';
+        })
+        .join('');
+
+    visiting.push(key);
+    const value = render(segments);
+    visiting.pop();
+    return { value, references: collectSpans(segments, []).map((s) => s.name), diagnostics };
+  }
 
   for (const key of defined.keys()) {
     resolveKey(key);
   }
-
   for (const [key, path] of cycles) {
-    results.get(key)?.diagnostics.push({
-      kind: 'cycle',
-      key,
-      ref: path[1],
-      message: `Reference cycle: ${path.join(' → ')}`,
-    });
+    byKey.get(key)?.diagnostics.push({ kind: 'cycle', key, ref: path[1], message: `Reference cycle: ${path.join(' → ')}` });
   }
 
-  return results;
+  return {
+    byKey,
+    resolveEntry: (entry) => (defined.get(entry.key) === entry ? (byKey.get(entry.key) as Resolution) : expand(entry)),
+  };
+}
+
+/** Resolution of every key, using the last definition of duplicate keys (like dotenv). */
+export function resolve(doc: EnvDocument): Map<string, Resolution> {
+  return createResolver(doc).byKey;
+}
+
+/** Resolution of every entry, including earlier definitions of duplicate keys. */
+export function resolveEntries(doc: EnvDocument): Map<EnvEntry, Resolution> {
+  const resolver = createResolver(doc);
+  return new Map(allEntries(doc).map((entry) => [entry, resolver.resolveEntry(entry)]));
 }

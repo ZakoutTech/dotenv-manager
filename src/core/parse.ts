@@ -154,6 +154,7 @@ export function parse(source: string): EnvDocument {
     const parsed = parseEntry(lines, i, eol);
     if (parsed) {
       parsed.entry.comment = pending;
+      parsed.entry.line = i;
       pending = [];
       push(parsed.entry);
       i += parsed.lineCount;

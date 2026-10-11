@@ -1,4 +1,5 @@
 import type { EnvDocument, EnvEntry, EnvGroup } from './model';
+import { isExpandable, renameReferences } from './resolve';
 import { toCommentLines } from './serialize';
 import type { EditIntent, EntryRef, VariableChanges } from '../shared/protocol';
 import { groupNameError, keyError } from '../shared/validation';
@@ -194,6 +195,23 @@ export function applyIntent(source: EnvDocument, intent: EditIntent): EnvDocumen
     case 'updateVariable': {
       const { group, itemIndex, entry } = locateEntry(doc, intent.ref);
       group.items[itemIndex] = updateEntry(entry, intent.changes);
+      break;
+    }
+    case 'renameVariable': {
+      const { group, itemIndex, entry } = locateEntry(doc, intent.ref);
+      group.items[itemIndex] = updateEntry(entry, { key: intent.key });
+      if (intent.updateReferences && intent.key !== entry.key) {
+        for (const g of doc.groups) {
+          g.items.forEach((item, i) => {
+            if (item.type === 'entry' && isExpandable(item)) {
+              const value = renameReferences(item.value, entry.key, intent.key);
+              if (value !== item.value) {
+                g.items[i] = updateEntry(item, { value });
+              }
+            }
+          });
+        }
+      }
       break;
     }
     case 'deleteVariable': {

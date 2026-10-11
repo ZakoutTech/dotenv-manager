@@ -311,3 +311,68 @@ textarea {
 .group.group-drop-after {
   box-shadow: 0 3px 0 var(--vscode-focusBorder);
 }
+
+/* References */
+.resolved {
+  color: var(--muted);
+  font-family: var(--vscode-editor-font-family);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.warning {
+  color: var(--vscode-editorWarning-foreground, orange);
+  font-size: 0.9em;
+  margin: 2px 0 0 24px;
+}
+.row-main {
+  position: relative;
+}
+.completions {
+  position: absolute;
+  z-index: 10;
+  min-width: 180px;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 2px 0 0;
+  padding: 2px 0;
+  list-style: none;
+  font-family: var(--vscode-editor-font-family);
+  color: var(--vscode-editorSuggestWidget-foreground, var(--vscode-foreground));
+  background: var(--vscode-editorSuggestWidget-background, var(--vscode-input-background));
+  border: 1px solid var(--vscode-editorSuggestWidget-border, var(--border));
+  border-radius: var(--radius);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.36);
+}
+.completions [role='option'] {
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.completions [aria-selected='true'] {
+  color: var(--vscode-editorSuggestWidget-selectedForeground, var(--vscode-list-activeSelectionForeground));
+  background: var(--vscode-editorSuggestWidget-selectedBackground, var(--vscode-list-activeSelectionBackground));
+}
+
+/* Align comments with keys / group titles now that rows and headers start with a drag handle. */
+:root {
+  --row-indent: 30px;
+  --group-indent: 58px;
+}
+.var-comment {
+  padding-left: var(--row-indent);
+}
+.row > .inline-editor,
+.row > .confirm,
+.row > .field-error,
+.warning {
+  margin-left: var(--row-indent);
+}
+.group-comment,
+.group-comment-editor,
+.group > .confirm,
+.group > .field-error,
+.empty-hint {
+  margin-left: var(--group-indent);
+}
+.group.ungrouped .empty-hint {
+  margin-left: 32px;
+}

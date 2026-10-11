@@ -149,6 +149,28 @@ describe('applyIntent', () => {
     });
   });
 
+  describe('renameVariable', () => {
+    const REFS = 'A=1\nB=${A}-$A-${A:-x}-${AB}\nC=\'${A}\'\nD="\\${A}"\nE=${MISSING:-$A} # keep\n';
+
+    it('renames and rewrites references in every expandable value', () => {
+      expect(edit(REFS, { type: 'renameVariable', ref: { group: 0, index: 0 }, key: 'Z', updateReferences: true })).toBe(
+        'Z=1\nB=${Z}-$Z-${Z:-x}-${AB}\nC=\'${A}\'\nD="\\${A}"\nE=${MISSING:-$Z} # keep\n',
+      );
+    });
+
+    it('renames only the variable when references are not updated', () => {
+      expect(edit(REFS, { type: 'renameVariable', ref: { group: 0, index: 0 }, key: 'Z', updateReferences: false })).toBe(
+        REFS.replace('A=1', 'Z=1'),
+      );
+    });
+
+    it('rejects an invalid new key', () => {
+      expect(() =>
+        edit(REFS, { type: 'renameVariable', ref: { group: 0, index: 0 }, key: '9', updateReferences: true }),
+      ).toThrow(EditError);
+    });
+  });
+
   describe('sorting', () => {
     const UNSORTED = [
       '# === G ===',

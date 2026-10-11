@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 import { EditError } from './core/edits';
 import type { EditIntent } from './shared/protocol';
 import { applyIntentToDocument } from './editor/applyEdit';
+import { registerDiagnostics } from './editor/diagnostics';
 import { DotenvEditorProvider } from './editor/DotenvEditorProvider';
 
 export function activate(context: vscode.ExtensionContext): void {
+  registerDiagnostics(context);
   context.subscriptions.push(
     DotenvEditorProvider.register(context),
     vscode.commands.registerCommand('dotenvManager.openEditor', async (uri?: vscode.Uri) => {
