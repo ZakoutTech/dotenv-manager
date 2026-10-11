@@ -31,6 +31,7 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
     webview.html = getWebviewHtml({
       nonce: createNonce(),
       scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.js')).toString(),
+      styleUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.css')).toString(),
       cspSource: webview.cspSource,
     });
 
@@ -62,6 +63,9 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
           try {
             if (!(await applyIntentToDocument(document, message.intent))) {
               post({ type: 'error', message: 'VS Code rejected the edit.' });
+              postUpdate();
+            } else if (document.version === message.version) {
+              // No text change, so no change event will answer the webview's queue.
               postUpdate();
             }
           } catch (err) {

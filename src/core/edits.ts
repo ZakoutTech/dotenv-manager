@@ -1,6 +1,7 @@
 import type { EnvDocument, EnvEntry, EnvGroup } from './model';
 import { toCommentLines } from './serialize';
 import type { EditIntent, EntryRef, VariableChanges } from '../shared/protocol';
+import { groupNameError, keyError } from '../shared/validation';
 
 /** An intent that cannot be applied (bad input or stale reference). Safe to show to the user. */
 export class EditError extends Error {
@@ -10,20 +11,19 @@ export class EditError extends Error {
   }
 }
 
-const KEY_RE = /^[A-Za-z_][A-Za-z0-9_.-]*$/;
-
 export function validateKey(key: string): void {
-  if (!KEY_RE.test(key)) {
-    throw new EditError(`Invalid variable name "${key}": use letters, digits and _ (not starting with a digit).`);
+  const error = keyError(key);
+  if (error) {
+    throw new EditError(error);
   }
 }
 
 function validateGroupName(name: string): string {
-  const trimmed = name.trim();
-  if (trimmed === '' || trimmed.includes('===') || /[\r\n]/.test(trimmed)) {
-    throw new EditError(`Invalid group name "${name}".`);
+  const error = groupNameError(name);
+  if (error) {
+    throw new EditError(error);
   }
-  return trimmed;
+  return name.trim();
 }
 
 function getGroup(doc: EnvDocument, index: number): EnvGroup {

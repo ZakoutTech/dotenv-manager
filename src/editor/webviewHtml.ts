@@ -3,6 +3,8 @@ export interface WebviewHtmlOptions {
   nonce: string;
   /** Webview-safe URI of dist/webview.js (from webview.asWebviewUri). */
   scriptUri: string;
+  /** Webview-safe URI of dist/webview.css. */
+  styleUri: string;
   /** webview.cspSource, used to allow our own styles. */
   cspSource: string;
 }
@@ -22,7 +24,7 @@ function escapeAttr(value: string): string {
     .replace(/>/g, '&gt;');
 }
 
-export function getWebviewHtml({ nonce, scriptUri, cspSource }: WebviewHtmlOptions): string {
+export function getWebviewHtml({ nonce, scriptUri, styleUri, cspSource }: WebviewHtmlOptions): string {
   const n = escapeAttr(nonce);
   const csp = [
     "default-src 'none'",
@@ -36,10 +38,11 @@ export function getWebviewHtml({ nonce, scriptUri, cspSource }: WebviewHtmlOptio
   <meta charset="UTF-8">
   <meta http-equiv="Content-Security-Policy" content="${csp}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="${escapeAttr(styleUri)}">
   <title>Dotenv Manager</title>
 </head>
 <body>
-  <div id="app"><h1>Dotenv Manager</h1></div>
+  <div id="app"></div>
   <script nonce="${n}" src="${escapeAttr(scriptUri)}"></script>
 </body>
 </html>`;

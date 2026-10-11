@@ -1,0 +1,580 @@
+import type {
+  EditIntent,
+  FromWebviewMessage,
+  ToWebviewMessage,
+  ViewDocument,
+  ViewEntry,
+  ViewGroup,
+} from '../shared/protocol';
+import { groupNameError, keyError } from '../shared/validation';
+import { EditQueue } from './editQueue';
+
+type FieldKind = 'key' | 'value' | 'comment';
+
+type Editing =
+  | { kind: FieldKind; group: number; index: number }
+  | { kind: 'groupName' | 'groupComment' | 'deleteGroup' | 'newVariable'; group: number }
+  | { kind: 'newGroup' };
+
+interface State {
+  version?: number;
+  doc?: ViewDocument;
+  collapsed: Set<number>;
+  revealAll: boolean;
+  revealed: Set<string>;
+  editing?: Editing;
+  /** In-progress text of the open editor(s), keyed by field name (`text` for single-field editors). */
+  draft: Record<string, string>;
+  fieldError?: string;
+  error?: string;
+}
+
+type Child = Node | string | null | undefined | false;
+type Attrs = Record<string, string | boolean | undefined>;
+
+const MASK = '••••••••';
+
+function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): HTMLElementTagNameMap[K] {
+  const el = document.createElement(tag);
+  for (const [name, value] of Object.entries(attrs)) {
+    if (value === true) {
+      el.setAttribute(name, '');
+    } else if (typeof value === 'string') {
+      el.setAttribute(name, value);
+    }
+  }
+  for (const child of children) {
+    if (child !== null && child !== undefined && child !== false) {
+      el.append(child);
+    }
+  }
+  return el;
+}
+
+function on<E extends HTMLElement>(el: E, type: string, handler: (event: Event) => void): E {
+  el.addEventListener(type, handler);
+  return el;
+}
+
+function button(label: string, action: string, focusId: string, extra: Attrs = {}): HTMLButtonElement {
+  return h('button', { type: 'button', 'data-action': action, 'data-focus-id': focusId, ...extra }, label);
+}
+
+const rowId = (group: number, index: number): string => `${group}:${index}`;
+
+export interface App {
+  receive(message: ToWebviewMessage): void;
+}
+
+export function createApp(root: HTMLElement, post: (message: FromWebviewMessage) => void): App {
+  const queue = new EditQueue(post);
+  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), draft: {} };
+  let rendering = false;
+
+  const dispatch = (intent: EditIntent): void => queue.submit(intent);
+
+  const groupAt = (index: number): ViewGroup | undefined => state.doc?.groups[index];
+  const entryAt = (group: number, index: number): ViewEntry | undefined => groupAt(group)?.entries[index];
+
+  function startEditing(editing: Editing, draft: Record<string, string>): void {
+    state.editing = editing;
+    state.draft = { ...draft };
+    state.fieldError = undefined;
+    render();
+  }
+
+  function stopEditing(): void {
+    state.editing = undefined;
+    state.draft = {};
+    state.fieldError = undefined;
+    render();
+  }
+
+  function fail(message: string): void {
+    state.fieldError = message;
+    render();
+  }
+
+  function commit(): void {
+    const editing = state.editing;
+    if (!editing) {
+      return;
+    }
+    const text = state.draft.text ?? '';
+
+    switch (editing.kind) {
+      case 'key':
+      case 'value':
+      case 'comment': {
+        const entry = entryAt(editing.group, editing.index);
+        if (!entry) {
+          return stopEditing();
+        }
+        if (editing.kind === 'key') {
+          const error = keyError(text);
+          if (error) {
+            return fail(error);
+          }
+        }
+        if (text !== entry[editing.kind]) {
+          dispatch({
+            type: 'updateVariable',
+            ref: { group: editing.group, index: editing.index },
+            changes: { [editing.kind]: text },
+          });
+        }
+        return stopEditing();
+      }
+      case 'groupName': {
+        const error = groupNameError(text);
+        if (error) {
+          return fail(error);
+        }
+        if (text.trim() !== groupAt(editing.group)?.name) {
+          dispatch({ type: 'renameGroup', group: editing.group, name: text.trim() });
+        }
+        return stopEditing();
+      }
+      case 'groupComment':
+        if (text !== groupAt(editing.group)?.comment) {
+          dispatch({ type: 'updateGroupComment', group: editing.group, comment: text });
+        }
+        return stopEditing();
+      case 'newVariable': {
+        const key = (state.draft.key ?? '').trim();
+        const error = keyError(key);
+        if (error) {
+          return fail(error);
+        }
+        const intent: EditIntent = { type: 'addVariable', group: editing.group, key, value: state.draft.value ?? '' };
+        if (state.draft.comment) {
+          intent.comment = state.draft.comment;
+        }
+        dispatch(intent);
+        return stopEditing();
+      }
+      case 'newGroup': {
+        const name = state.draft.name ?? '';
+        const error = groupNameError(name);
+        if (error) {
+          return fail(error);
+        }
+        const intent: EditIntent = { type: 'addGroup', name: name.trim() };
+        if (state.draft.comment) {
+          intent.comment = state.draft.comment;
+        }
+        dispatch(intent);
+        return stopEditing();
+      }
+      case 'deleteGroup':
+        return stopEditing();
+    }
+  }
+
+  /** Single-field inline editor: Enter saves, Shift+Enter adds a line (textarea), Escape cancels, blur saves. */
+  function inlineEditor(multiline: boolean, label: string): HTMLInputElement | HTMLTextAreaElement {
+    const editing = state.editing;
+    const text = state.draft.text ?? '';
+    const el = multiline ? h('textarea', { rows: String(Math.max(1, text.split('\n').length)) }) : h('input', { type: 'text' });
+    el.className = 'inline-editor';
+    el.value = text;
+    el.setAttribute('aria-label', label);
+    el.setAttribute('data-autofocus', '');
+    if (state.fieldError) {
+      el.setAttribute('aria-invalid', 'true');
+    }
+    on(el, 'input', () => {
+      state.draft.text = el.value;
+      if (el instanceof HTMLTextAreaElement) {
+        el.rows = Math.max(1, el.value.split('\n').length);
+      }
+    });
+    on(el, 'keydown', (event) => {
+      const { key, shiftKey } = event as KeyboardEvent;
+      if (key === 'Escape') {
+        event.preventDefault();
+        stopEditing();
+      } else if (key === 'Enter' && !shiftKey) {
+        event.preventDefault();
+        commit();
+      }
+    });
+    on(el, 'blur', () => {
+      if (!rendering && state.editing === editing) {
+        commit();
+      }
+    });
+    return el;
+  }
+
+  function fieldError(): HTMLElement | null {
+    return state.fieldError ? h('div', { class: 'field-error', role: 'alert' }, state.fieldError) : null;
+  }
+
+  function isEditing(kind: Editing['kind'], group?: number, index?: number): boolean {
+    const e = state.editing;
+    if (!e || e.kind !== kind) {
+      return false;
+    }
+    if (group !== undefined && 'group' in e && e.group !== group) {
+      return false;
+    }
+    return index === undefined || ('index' in e && e.index === index);
+  }
+
+  function duplicateKeys(doc: ViewDocument): Set<string> {
+    const seen = new Set<string>();
+    const dups = new Set<string>();
+    for (const g of doc.groups) {
+      for (const e of g.entries) {
+        if (seen.has(e.key)) {
+          dups.add(e.key);
+        }
+        seen.add(e.key);
+      }
+    }
+    return dups;
+  }
+
+  function renderRow(entry: ViewEntry, g: number, i: number, duplicates: Set<string>): HTMLElement {
+    const id = rowId(g, i);
+    const revealed = state.revealAll || state.revealed.has(id);
+    const editingRow = isEditing('key', g, i) || isEditing('value', g, i) || isEditing('comment', g, i);
+
+    let comment: Child = null;
+    if (isEditing('comment', g, i)) {
+      comment = inlineEditor(true, `Comment for ${entry.key}`);
+    } else if (entry.comment) {
+      comment = on(h('div', { class: 'var-comment', title: 'Edit comment' }, entry.comment), 'click', () =>
+        startEditing({ kind: 'comment', group: g, index: i }, { text: entry.comment }),
+      );
+    }
+
+    const key = isEditing('key', g, i)
+      ? inlineEditor(false, 'Variable name')
+      : on(button(entry.key, 'edit-key', `key-${id}`, { class: 'key', title: 'Rename' }), 'click', () =>
+          startEditing({ kind: 'key', group: g, index: i }, { text: entry.key }),
+        );
+
+    let value: HTMLElement;
+    if (isEditing('value', g, i)) {
+      value = inlineEditor(true, `Value of ${entry.key}`);
+    } else {
+      const shown = entry.value === '' ? '(empty)' : revealed ? entry.value : MASK;
+      value = on(
+        button(shown, 'edit-value', `value-${id}`, {
+          class: entry.value === '' ? 'value empty' : revealed ? 'value' : 'value masked',
+          title: 'Edit value',
+          'aria-label': revealed ? `Value of ${entry.key}: ${entry.value}` : `Value of ${entry.key} (hidden)`,
+        }),
+        'click',
+        () => startEditing({ kind: 'value', group: g, index: i }, { text: entry.value }),
+      );
+    }
+
+    const reveal = on(
+      button(revealed ? 'Hide' : 'Show', 'reveal', `reveal-${id}`, {
+        class: 'icon',
+        'aria-pressed': String(revealed),
+        disabled: state.revealAll,
+        title: revealed ? 'Hide value' : 'Show value',
+      }),
+      'click',
+      () => {
+        if (state.revealed.has(id)) {
+          state.revealed.delete(id);
+        } else {
+          state.revealed.add(id);
+        }
+        render();
+      },
+    );
+
+    const exportBox = h('input', {
+      type: 'checkbox',
+      'data-action': 'toggle-export',
+      'data-focus-id': `export-${id}`,
+      checked: entry.exported,
+    });
+    on(exportBox, 'change', () =>
+      dispatch({ type: 'updateVariable', ref: { group: g, index: i }, changes: { exported: exportBox.checked } }),
+    );
+
+    return h(
+      'li',
+      { class: 'row', 'data-row': id },
+      comment,
+      h(
+        'div',
+        { class: 'row-main' },
+        key,
+        h('span', { class: 'eq', 'aria-hidden': 'true' }, '='),
+        value,
+        reveal,
+        h('label', { class: 'export', title: 'Prefix with export' }, exportBox, 'export'),
+        duplicates.has(entry.key)
+          ? h('span', { class: 'badge-duplicate', title: `${entry.key} is defined more than once; the last one wins` }, 'duplicate')
+          : null,
+        h(
+          'span',
+          { class: 'actions' },
+          on(button('Comment', 'edit-comment', `comment-${id}`, { title: 'Edit comment' }), 'click', () =>
+            startEditing({ kind: 'comment', group: g, index: i }, { text: entry.comment }),
+          ),
+          on(button('Delete', 'delete-variable', `delete-${id}`, { class: 'danger', title: `Delete ${entry.key}` }), 'click', () =>
+            dispatch({ type: 'deleteVariable', ref: { group: g, index: i } }),
+          ),
+        ),
+      ),
+      editingRow ? fieldError() : null,
+    );
+  }
+
+  function formField(name: string, label: string, multiline: boolean, placeholder: string, autofocus = false): HTMLElement {
+    const field = multiline ? h('textarea', { name, rows: '1', placeholder }) : h('input', { type: 'text', name, placeholder });
+    field.value = state.draft[name] ?? '';
+    if (autofocus) {
+      field.setAttribute('data-autofocus', '');
+    }
+    on(field, 'input', () => {
+      state.draft[name] = field.value;
+    });
+    return h('label', { class: 'form-field' }, h('span', {}, label), field);
+  }
+
+  function inlineForm(className: string, submitLabel: string, fields: HTMLElement[]): HTMLFormElement {
+    const form = h(
+      'form',
+      { class: `inline-form ${className}` },
+      ...fields,
+      fieldError(),
+      h(
+        'div',
+        { class: 'form-actions' },
+        h('button', { type: 'submit', 'data-action': 'save', class: 'primary' }, submitLabel),
+        on(button('Cancel', 'cancel', `cancel-${className}`), 'click', stopEditing),
+      ),
+    );
+    on(form, 'submit', (event) => {
+      event.preventDefault();
+      commit();
+    });
+    on(form, 'keydown', (event) => {
+      if ((event as KeyboardEvent).key === 'Escape') {
+        event.preventDefault();
+        stopEditing();
+      }
+    });
+    return form;
+  }
+
+  function renderGroup(group: ViewGroup, g: number, duplicates: Set<string>): HTMLElement {
+    const named = group.name !== null;
+    const expanded = !state.collapsed.has(g);
+    const count = group.entries.length;
+    const label = group.name ?? 'Ungrouped';
+
+    const toggle = on(
+      button(expanded ? '▾' : '▸', 'toggle-group', `toggle-${g}`, {
+        class: 'icon',
+        'aria-expanded': String(expanded),
+        'aria-label': `${expanded ? 'Collapse' : 'Expand'} ${label}`,
+      }),
+      'click',
+      () => {
+        if (expanded) {
+          state.collapsed.add(g);
+        } else {
+          state.collapsed.delete(g);
+        }
+        render();
+      },
+    );
+
+    let title: HTMLElement;
+    if (isEditing('groupName', g)) {
+      title = inlineEditor(false, 'Group name');
+    } else if (named) {
+      title = on(button(label, 'rename-group', `rename-${g}`, { class: 'group-title', title: 'Rename group' }), 'click', () =>
+        startEditing({ kind: 'groupName', group: g }, { text: group.name ?? '' }),
+      );
+    } else {
+      title = h('span', { class: 'group-title' }, label);
+    }
+
+    const actions = h(
+      'span',
+      { class: 'actions' },
+      named
+        ? on(button('Comment', 'edit-group-comment', `group-comment-${g}`, { title: 'Edit group comment' }), 'click', () =>
+            startEditing({ kind: 'groupComment', group: g }, { text: group.comment }),
+          )
+        : null,
+      named
+        ? on(button('Delete', 'delete-group', `delete-group-${g}`, { class: 'danger', title: `Delete group ${label}` }), 'click', () =>
+            startEditing({ kind: 'deleteGroup', group: g }, {}),
+          )
+        : null,
+      on(button('+ Variable', 'add-variable', `add-variable-${g}`, { title: `Add a variable to ${label}` }), 'click', () =>
+        startEditing({ kind: 'newVariable', group: g }, {}),
+      ),
+    );
+
+    let comment: Child = null;
+    if (isEditing('groupComment', g)) {
+      comment = h('div', { class: 'group-comment-editor' }, inlineEditor(true, `Comment for group ${label}`), fieldError());
+    } else if (group.comment) {
+      comment = on(h('p', { class: 'group-comment', title: 'Edit group comment' }, group.comment), 'click', () =>
+        startEditing({ kind: 'groupComment', group: g }, { text: group.comment }),
+      );
+    }
+
+    let confirm: Child = null;
+    if (isEditing('deleteGroup', g)) {
+      confirm = h(
+        'div',
+        { class: 'confirm', role: 'alert' },
+        h('span', {}, `Delete group “${label}”?`),
+        on(
+          button(count > 0 ? `Delete group and ${count} variable${count === 1 ? '' : 's'}` : 'Delete group', 'confirm-delete-group', `confirm-delete-${g}`, {
+            class: 'danger',
+            'data-autofocus': true,
+          }),
+          'click',
+          () => {
+            dispatch({ type: 'deleteGroup', group: g, deleteVariables: true });
+            stopEditing();
+          },
+        ),
+        count > 0
+          ? on(button('Delete group, keep variables', 'keep-variables', `keep-variables-${g}`), 'click', () => {
+              dispatch({ type: 'deleteGroup', group: g, deleteVariables: false });
+              stopEditing();
+            })
+          : null,
+        on(button('Cancel', 'cancel', `cancel-delete-${g}`), 'click', stopEditing),
+      );
+    }
+
+    const body: Child[] = [];
+    if (expanded) {
+      body.push(
+        count > 0
+          ? h('ul', { class: 'rows', role: 'list' }, ...group.entries.map((e, i) => renderRow(e, g, i, duplicates)))
+          : h('p', { class: 'empty-hint' }, 'No variables in this group.'),
+      );
+      if (isEditing('newVariable', g)) {
+        body.push(
+          inlineForm('new-variable', 'Add variable', [
+            formField('key', 'Name', false, 'VARIABLE_NAME', true),
+            formField('value', 'Value', true, 'value'),
+            formField('comment', 'Comment', true, 'optional'),
+          ]),
+        );
+      }
+    }
+
+    return h(
+      'section',
+      { class: named ? 'group' : 'group ungrouped', 'data-group': String(g), 'aria-label': label },
+      h('div', { class: 'group-header' }, toggle, title, h('span', { class: 'count', title: `${count} variables` }, String(count)), actions),
+      isEditing('groupName', g) ? fieldError() : null,
+      comment,
+      confirm,
+      ...body,
+    );
+  }
+
+  function render(): void {
+    rendering = true;
+    const activeId = (document.activeElement as HTMLElement | null)?.dataset?.focusId;
+
+    const children: Child[] = [];
+    const revealAll = h('input', { type: 'checkbox', 'data-action': 'reveal-all', 'data-focus-id': 'reveal-all', checked: state.revealAll });
+    on(revealAll, 'change', () => {
+      state.revealAll = revealAll.checked;
+      render();
+    });
+    children.push(
+      h(
+        'div',
+        { class: 'toolbar', role: 'toolbar', 'aria-label': 'Dotenv Manager' },
+        on(button('+ Group', 'add-group', 'add-group', { class: 'primary' }), 'click', () => startEditing({ kind: 'newGroup' }, {})),
+        h('label', { class: 'reveal-all' }, revealAll, 'Show values'),
+      ),
+    );
+
+    if (state.error) {
+      children.push(
+        h(
+          'div',
+          { class: 'error-banner', role: 'alert' },
+          h('span', {}, state.error),
+          on(button('×', 'dismiss-error', 'dismiss-error', { class: 'icon', 'aria-label': 'Dismiss error' }), 'click', () => {
+            state.error = undefined;
+            render();
+          }),
+        ),
+      );
+    }
+
+    if (isEditing('newGroup')) {
+      children.push(
+        inlineForm('new-group', 'Add group', [
+          formField('name', 'Group name', false, 'Database', true),
+          formField('comment', 'Comment', true, 'optional'),
+        ]),
+      );
+    }
+
+    const doc = state.doc;
+    if (doc) {
+      const duplicates = duplicateKeys(doc);
+      doc.groups.forEach((group, g) => {
+        const showUngrouped = group.entries.length > 0 || doc.groups.length === 1 || isEditing('newVariable', 0);
+        if (group.name !== null || showUngrouped) {
+          children.push(renderGroup(group, g, duplicates));
+        }
+      });
+    }
+
+    root.replaceChildren(...children.filter((c): c is Node | string => !!c));
+
+    const target =
+      root.querySelector<HTMLElement>('[data-autofocus]') ??
+      (activeId ? root.querySelector<HTMLElement>(`[data-focus-id="${activeId}"]`) : null);
+    target?.focus();
+    rendering = false;
+  }
+
+  /** Drop editing state that points at something the new document no longer has. */
+  function reconcileEditing(): void {
+    const e = state.editing;
+    if (!e || e.kind === 'newGroup') {
+      return;
+    }
+    const exists = 'index' in e ? !!entryAt(e.group, e.index) : !!groupAt(e.group);
+    if (!exists) {
+      state.editing = undefined;
+      state.draft = {};
+      state.fieldError = undefined;
+    }
+  }
+
+  post({ type: 'ready' });
+
+  return {
+    receive(message: ToWebviewMessage): void {
+      if (message.type === 'update') {
+        state.version = message.version;
+        state.doc = message.doc;
+        reconcileEditing();
+        queue.setVersion(message.version);
+      } else {
+        state.error = message.message;
+        queue.failed();
+      }
+      render();
+    },
+  };
+}

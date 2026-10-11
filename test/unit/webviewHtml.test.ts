@@ -5,7 +5,12 @@ describe('getWebviewHtml', () => {
   const html = getWebviewHtml({
     nonce: 'abc123',
     scriptUri: 'vscode-webview://x/dist/webview.js',
+    styleUri: 'vscode-webview://x/dist/webview.css',
     cspSource: 'vscode-webview://x',
+  });
+
+  it('links the webview stylesheet', () => {
+    expect(html).toContain('<link rel="stylesheet" href="vscode-webview://x/dist/webview.css">');
   });
 
   it('declares a restrictive Content-Security-Policy', () => {
@@ -19,13 +24,13 @@ describe('getWebviewHtml', () => {
     expect(html).toContain('<script nonce="abc123" src="vscode-webview://x/dist/webview.js"></script>');
   });
 
-  it('renders the placeholder root element', () => {
-    expect(html).toContain('<div id="app">');
-    expect(html).toContain('Dotenv Manager');
+  it('renders the app root element', () => {
+    expect(html).toContain('<div id="app"></div>');
+    expect(html).toContain('<title>Dotenv Manager</title>');
   });
 
   it('escapes attribute values', () => {
-    const evil = getWebviewHtml({ nonce: 'n', scriptUri: '"><img src=x>', cspSource: 'c' });
+    const evil = getWebviewHtml({ nonce: 'n', scriptUri: '"><img src=x>', styleUri: 's', cspSource: 'c' });
     expect(evil).not.toContain('"><img');
     expect(evil).toContain('&quot;&gt;&lt;img');
   });
