@@ -1,4 +1,5 @@
 import * as assert from 'node:assert';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 
@@ -37,6 +38,18 @@ suite('Dotenv Manager extension', () => {
     const editor = editors.find((e) => e.viewType === VIEW_TYPE);
     assert.ok(editor, 'custom editor should be contributed');
     assert.strictEqual(editor.priority, 'option');
+  });
+
+  test('shows an icon button in the editor title bar for .env files', () => {
+    const ext = vscode.extensions.getExtension(EXTENSION_ID);
+    assert.ok(ext);
+    const { commands, menus } = ext.packageJSON.contributes;
+    const open = commands.find((c: { command: string }) => c.command === 'dotenvManager.openEditor');
+    for (const file of [open.icon.light, open.icon.dark, ext.packageJSON.icon]) {
+      assert.ok(fs.existsSync(path.join(ext.extensionPath, file)), `${file} should exist`);
+    }
+    const titleItem = menus['editor/title'].find((m: { command: string }) => m.command === 'dotenvManager.openEditor');
+    assert.strictEqual(titleItem.group, 'navigation');
   });
 
   test('opens a .env file in the Dotenv Manager editor via vscode.openWith', async () => {
