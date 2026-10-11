@@ -65,25 +65,7 @@
             ".env.example"
           ],
           "uniqueItems": true,
-          "markdownDescription": "File names Dotenv Manager detects and opens. Only these files are listed, counted and opened in Dotenv Manager by default; every other file keeps its own editor. Names only (no folders); `*`, `?`, `{a,b}` and `[abc]` are supported, e.g. `.env.*.local`. Dotenv Manager keeps the matching `#workbench.editorAssociations#` entries in sync with this list."
-        },
-        "dotenvManager.defaultView": {
-          "type": "string",
-          "enum": [
-            "visual",
-            "text"
-          ],
-          "enumItemLabels": [
-            "Dotenv Manager",
-            "Text Editor"
-          ],
-          "enumDescriptions": [
-            "Open .env files in the Dotenv Manager visual editor.",
-            "Open .env files in the plain text editor."
-          ],
-          "default": "visual",
-          "order": 0,
-          "markdownDescription": "Editor used when you open a file listed in `#dotenvManager.envFiles#`. Dotenv Manager keeps the matching `#workbench.editorAssociations#` entries in sync with this choice. You can always switch with **Open as Text** / **Open with Dotenv Manager**."
+          "markdownDescription": "File names Dotenv Manager detects. Only these files are listed and counted, and offer **Open with Dotenv Manager**; every other file is ignored. Names only (no folders); `*`, `?`, `{a,b}` and `[abc]` are supported, e.g. `.env.*.local`."
         },
         "dotenvManager.exclude": {
           "type": "array",
@@ -142,11 +124,6 @@
         "title": "Open as Text",
         "category": "Dotenv Manager",
         "icon": "$(go-to-file)"
-      },
-      {
-        "command": "dotenvManager.chooseDefaultView",
-        "title": "Choose Default Editor for .env Files",
-        "category": "Dotenv Manager"
       },
       {
         "command": "dotenvManager.selectEnvFile",

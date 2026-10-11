@@ -8,7 +8,6 @@ import { applyIntent, EditError } from '../src/core/edits';
 import { parse } from '../src/core/parse';
 import { serialize } from '../src/core/serialize';
 import { toViewDocument } from '../src/core/viewModel';
-import type { DefaultView } from '../src/shared/associations';
 import type { FromWebviewMessage, ToWebviewMessage } from '../src/shared/protocol';
 
 const SAMPLE = `# Local development settings
@@ -83,17 +82,10 @@ function setText(next: string): void {
   version++;
 }
 
-let defaultView: DefaultView = 'visual';
-
 function handle(message: FromWebviewMessage): void {
   switch (message.type) {
     case 'ready':
-      send({ type: 'settings', defaultView });
       publish();
-      return;
-    case 'setDefaultView':
-      defaultView = message.view;
-      send({ type: 'settings', defaultView });
       return;
     case 'save':
       savedText = text;

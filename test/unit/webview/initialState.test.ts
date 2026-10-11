@@ -4,8 +4,8 @@ import { readInitialMessages } from '../../../src/webview/initialState';
 
 describe('readInitialMessages', () => {
   it('reads the embedded messages', () => {
-    document.body.innerHTML = '<script type="application/json" id="initial-state">[{"type":"settings","defaultView":"text"}]</script>';
-    expect(readInitialMessages(document)).toEqual([{ type: 'settings', defaultView: 'text' }]);
+    document.body.innerHTML = '<script type="application/json" id="initial-state">[{"type":"error","message":"x"}]</script>';
+    expect(readInitialMessages(document)).toEqual([{ type: 'error', message: 'x' }]);
   });
 
   it('returns no messages when the block is missing or malformed', () => {

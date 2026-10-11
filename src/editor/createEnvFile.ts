@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { newEnvFilePathError, normalizeNewEnvFilePath } from '../shared/newEnvFile';
-import { openEnvFile } from './defaultView';
 import { configuredEnvFiles } from './envFileSettings';
 
 /**
@@ -35,7 +34,7 @@ async function exists(uri: vscode.Uri): Promise<boolean> {
 }
 
 /**
- * Create an empty .env file and open it in the user's default editor. Never overwrites:
+ * Create an empty .env file and open it in the text editor. Never overwrites:
  * an existing file is offered for opening instead. `pathArg` skips the prompt (tests, links).
  */
 export async function createEnvFile(arg?: unknown, pathArg?: string): Promise<vscode.Uri | undefined> {
@@ -70,13 +69,13 @@ export async function createEnvFile(arg?: unknown, pathArg?: string): Promise<vs
     // Don't wait for the notification: callers get their answer right away.
     void vscode.window.showWarningMessage(`${normalizeNewEnvFilePath(input)} already exists.`, 'Open').then((choice) => {
       if (choice === 'Open') {
-        void openEnvFile(uri);
+        void vscode.commands.executeCommand('vscode.open', uri);
       }
     });
     return undefined;
   }
   await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
   await vscode.workspace.fs.writeFile(uri, new Uint8Array());
-  await openEnvFile(uri);
+  await vscode.commands.executeCommand('vscode.open', uri);
   return uri;
 }

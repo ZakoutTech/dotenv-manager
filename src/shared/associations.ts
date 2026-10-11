@@ -1,42 +1,30 @@
 /** viewType of the Dotenv Manager custom editor. */
 export const DOTENV_VIEW_TYPE = 'dotenvManager.editor';
 
-export type DefaultView = 'visual' | 'text';
-
 /** The built-in text editor's id in `workbench.editorAssociations`. */
 const TEXT_EDITOR = 'default';
 
-/** Patterns written by earlier versions; dropped when no longer listed, so `.env.*` can't claim `.env.ts`. */
-const LEGACY_PATTERNS = ['.env.*', '*.env'];
+/** Patterns earlier versions wrote besides the `dotenvManager.envFiles` names. */
+const LEGACY_PATTERNS = ['.env', '.env.*', '*.env'];
 
 /**
- * New `workbench.editorAssociations` value that opens the `dotenvManager.envFiles` patterns in
- * `view`, or undefined when the current value already does.
- *
- * The custom editor is only an "option" editor, so these entries are what make it the default.
- * Entries pointing at Dotenv Manager for patterns that are no longer listed are removed; other
- * editors' entries are kept.
+ * `workbench.editorAssociations` without the entries earlier versions wrote to make Dotenv Manager
+ * (or the text editor) the default for .env files, or undefined when there is nothing to remove.
+ * Dotenv Manager now opens only on request ("Open with Dotenv Manager"), never by default.
  */
-export function nextAssociations(
+export function withoutDotenvAssociations(
   current: Record<string, string> | undefined,
-  view: DefaultView,
   viewType: string,
   patterns: readonly string[],
 ): Record<string, string> | undefined {
-  const existing = current ?? {};
-  const listed = new Set(patterns);
-  const next: Record<string, string> = {};
-  for (const [pattern, editor] of Object.entries(existing)) {
-    const stale =
-      !listed.has(pattern) &&
-      (editor === viewType || (LEGACY_PATTERNS.includes(pattern) && editor === TEXT_EDITOR));
-    if (!stale) {
-      next[pattern] = editor;
-    }
+  if (!current) {
+    return undefined;
   }
-  for (const pattern of patterns) {
-    next[pattern] = view === 'text' ? TEXT_EDITOR : viewType;
-  }
-  const keys = new Set([...Object.keys(existing), ...Object.keys(next)]);
-  return [...keys].some((k) => existing[k] !== next[k]) ? next : undefined;
+  const written = new Set([...patterns, ...LEGACY_PATTERNS]);
+  const next = Object.fromEntries(
+    Object.entries(current).filter(
+      ([pattern, editor]) => editor !== viewType && !(editor === TEXT_EDITOR && written.has(pattern)),
+    ),
+  );
+  return Object.keys(next).length === Object.keys(current).length ? undefined : next;
 }

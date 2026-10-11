@@ -407,27 +407,12 @@ describe('references', () => {
   });
 });
 
-describe('default editor', () => {
-  it('shows the default-view picker once the extension reports the setting', () => {
+describe('opening files', () => {
+  it('has no default-editor picker (Dotenv Manager only opens on request)', () => {
     expect(root.querySelector('[data-action="default-view"]')).toBeNull();
-    app.receive({ type: 'settings', defaultView: 'text' });
-    expect($<HTMLSelectElement>('[data-action="default-view"]').value).toBe('text');
-  });
-
-  it('asks the extension to change the default view', () => {
-    app.receive({ type: 'settings', defaultView: 'visual' });
-    const select = $<HTMLSelectElement>('[data-action="default-view"]');
-    select.value = 'text';
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-    expect(posted.at(-1)).toEqual({ type: 'setDefaultView', view: 'text' });
-    expect(edits()).toEqual([]);
-  });
-
-  it('asks the extension to reopen the file as text', () => {
-    $('[data-action="open-as-text"]').click();
-    expect(posted.at(-1)).toEqual({ type: 'openAsText' });
   });
 });
+
 
 describe('sync', () => {
   it('sends edits with the latest document version', () => {

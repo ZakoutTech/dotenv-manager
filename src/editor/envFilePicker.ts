@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { countVariables, pickerEntries } from '../core/envFileList';
 import { DOTENV_VIEW_TYPE } from '../shared/associations';
 import { activeEnvUri } from './activeEnv';
-import { openEnvFile } from './defaultView';
 import type { EnvFileIndex } from './envFileIndex';
 
 interface FileItem extends vscode.QuickPickItem {
@@ -98,7 +97,10 @@ export async function selectEnvFile(index: EnvFileIndex): Promise<void> {
   const open = async (uri: string, viewType?: string): Promise<void> => {
     picker.hide();
     const target = vscode.Uri.parse(uri);
-    await (viewType ? vscode.commands.executeCommand('vscode.openWith', target, viewType) : openEnvFile(target));
+    // Without a viewType the file opens in its normal (text) editor.
+    await (viewType
+      ? vscode.commands.executeCommand('vscode.openWith', target, viewType)
+      : vscode.commands.executeCommand('vscode.open', target));
   };
 
   picker.onDidAccept(() => {

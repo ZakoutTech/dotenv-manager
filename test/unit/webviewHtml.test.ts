@@ -40,9 +40,9 @@ describe('getWebviewHtml initial state', () => {
   const base = { nonce: 'n', scriptUri: 's', styleUri: 'c', cspSource: 'x' };
 
   it('embeds initial messages as non-executable JSON', () => {
-    const html = getWebviewHtml({ ...base, initialMessages: [{ type: 'settings', defaultView: 'text' }] });
+    const html = getWebviewHtml({ ...base, initialMessages: [{ type: 'error', message: 'x' }] });
     const json = /<script type="application\/json" id="initial-state">(.*?)<\/script>/s.exec(html)?.[1];
-    expect(JSON.parse(json ?? 'null')).toEqual([{ type: 'settings', defaultView: 'text' }]);
+    expect(JSON.parse(json ?? 'null')).toEqual([{ type: 'error', message: 'x' }]);
   });
 
   it('escapes file content so it cannot close the script tag', () => {

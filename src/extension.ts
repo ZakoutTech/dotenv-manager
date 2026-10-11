@@ -6,7 +6,7 @@ import type { EditIntent } from './shared/protocol';
 import { targetUri } from './editor/activeEnv';
 import { applyIntentToDocument } from './editor/applyEdit';
 import { createEnvFile } from './editor/createEnvFile';
-import { registerDefaultView } from './editor/defaultView';
+import { removeLegacyAssociations } from './editor/legacyAssociations';
 import { registerDiagnostics } from './editor/diagnostics';
 import { EnvFileIndex } from './editor/envFileIndex';
 import { configuredEnvFiles, ENV_FILES_SETTING } from './editor/envFileSettings';
@@ -61,7 +61,7 @@ export function activate(context: vscode.ExtensionContext): DotenvManagerApi {
   registerMenuContext(context, index);
 
   registerDiagnostics(context);
-  registerDefaultView(context);
+  void removeLegacyAssociations(context);
   registerStatusBar(context, index);
   const tree = registerEnvFileTree(context, index);
 

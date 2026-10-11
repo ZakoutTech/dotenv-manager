@@ -93,76 +93,25 @@ async function waitFor<T>(read: () => T, done: (value: T) => boolean, timeoutMs 
 
 const isTextTab = (): boolean => vscode.window.tabGroups.activeTabGroup.activeTab?.input instanceof vscode.TabInputText;
 
-suite('Default editor for .env files', () => {
+suite('Opening .env files', () => {
   const associations = (): Record<string, string> =>
     vscode.workspace.getConfiguration('workbench').get<Record<string, string>>('editorAssociations') ?? {};
-  const setDefaultView = (view: 'visual' | 'text' | undefined): Thenable<void> =>
-    vscode.workspace.getConfiguration('dotenvManager').update('defaultView', view, vscode.ConfigurationTarget.Global);
 
   teardown(async () => {
     await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor');
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-    await setDefaultView(undefined);
-    await vscode.workspace.getConfiguration('workbench').update('editorAssociations', undefined, vscode.ConfigurationTarget.Global);
   });
 
-  test('opens .env files in Dotenv Manager by default', async () => {
-    await vscode.commands.executeCommand('vscode.open', fixtureUri('sample.env'));
-    assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);
-  });
-
-  test('the defaultView setting switches the default editor via editorAssociations', async () => {
-    await setDefaultView('text');
-    await waitFor(associations, (a) => a['.env'] === 'default');
-    assert.deepStrictEqual(
-      ['.env', '.env.local', '.env.test', 'sample.env'].map((p) => associations()[p]),
-      ['default', 'default', 'default', 'default'],
-    );
-    await vscode.commands.executeCommand('vscode.open', fixtureUri('sample.env'));
-    assert.ok(await waitFor(isTextTab, (text) => text), 'should open as text');
-
-    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-    await setDefaultView('visual');
-    await waitFor(associations, (a) => a['.env'] === VIEW_TYPE);
-    await vscode.commands.executeCommand('vscode.open', fixtureUri('sample.env'));
-    assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);
-  });
-
-  test('only names in dotenvManager.envFiles open in Dotenv Manager; .env.ts keeps its own editor', async () => {
-    const file = fixtureUri('.env.ts');
-    fs.writeFileSync(file.fsPath, 'export const x = 1;\n');
-    try {
-      await waitFor(associations, (a) => a['sample.env'] === VIEW_TYPE);
-      assert.strictEqual(associations()['.env.*'], undefined);
-      await vscode.commands.executeCommand('vscode.open', file);
-      assert.ok(await waitFor(isTextTab, (text) => text), '.env.ts should open as text');
+  test('opens .env files as text; Dotenv Manager only opens on request', async () => {
+    assert.ok(!Object.values(associations()).includes(VIEW_TYPE), 'no association may make Dotenv Manager the default');
+    for (const name of ['sample.env', 'apps/api/.env.local']) {
+      await vscode.commands.executeCommand('vscode.open', fixtureUri(name));
+      assert.ok(await waitFor(isTextTab, (text) => text), `${name} should open as text`);
       assert.strictEqual(activeTabViewType(), undefined);
-    } finally {
       await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-      fs.rmSync(file.fsPath, { force: true });
     }
-  });
-
-  test('adding a name to dotenvManager.envFiles makes it open in Dotenv Manager', async () => {
-    const config = vscode.workspace.getConfiguration('dotenvManager');
-    const file = fixtureUri('.env.staging');
-    fs.writeFileSync(file.fsPath, 'A=1\n');
-    const listed = config.inspect<string[]>('envFiles')?.workspaceValue ?? [];
-    try {
-      await vscode.commands.executeCommand('vscode.open', file);
-      assert.ok(await waitFor(isTextTab, (text) => text), 'unlisted names open as text');
-      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-
-      await config.update('envFiles', [...listed, '.env.staging'], vscode.ConfigurationTarget.Workspace);
-      await waitFor(associations, (a) => a['.env.staging'] === VIEW_TYPE);
-      await vscode.commands.executeCommand('vscode.open', file);
-      assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);
-    } finally {
-      await vscode.commands.executeCommand('workbench.action.closeAllEditors');
-      await config.update('envFiles', listed, vscode.ConfigurationTarget.Workspace);
-      fs.rmSync(file.fsPath, { force: true });
-    }
-    assert.strictEqual(await waitFor(() => associations()['.env.staging'], (v) => v === undefined), undefined);
+    await vscode.commands.executeCommand('dotenvManager.openEditor', fixtureUri('sample.env'));
+    assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);
   });
 
   test('"Open as Text" replaces the Dotenv Manager tab', async () => {

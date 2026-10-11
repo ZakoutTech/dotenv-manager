@@ -77,10 +77,10 @@ suite('Workspace .env files', () => {
     const item = tree.getTreeItem(nodes[1]);
     assert.strictEqual(item.description, 'apps/api');
     assert.strictEqual(item.contextValue, 'dotenvManager.envFile');
-    assert.strictEqual(item.command?.command, 'dotenvManager.openEnvFile');
+    assert.strictEqual(item.command?.command, 'vscode.open');
     await vscode.commands.executeCommand(item.command.command, ...(item.command.arguments ?? []));
     const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-    assert.ok(input instanceof vscode.TabInputCustom && input.uri.path.endsWith('apps/api/.env.local'));
+    assert.ok(input instanceof vscode.TabInputText && input.uri.path.endsWith('apps/api/.env.local'), 'opens as text');
     await vscode.commands.executeCommand('workbench.action.closeAllEditors');
   });
 

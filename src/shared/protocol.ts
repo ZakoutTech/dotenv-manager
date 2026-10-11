@@ -4,7 +4,6 @@
  */
 
 import type { Quote } from '../core/model';
-import type { DefaultView } from './associations';
 
 /** Addresses a variable by its group and its position among that group's variables. */
 export interface EntryRef {
@@ -72,12 +71,10 @@ export type ToWebviewMessage =
   | { type: 'update'; version: number; doc: ViewDocument; text?: string; dirty?: boolean }
   /** Unsaved-changes state changed without a text change (saved or reverted to disk). */
   | { type: 'dirty'; dirty: boolean }
-  | { type: 'error'; message: string }
-  | { type: 'settings'; defaultView: DefaultView };
+  | { type: 'error'; message: string };
 
 export type FromWebviewMessage =
   | { type: 'ready' }
   | { type: 'edit'; version: number; intent: EditIntent }
-  | { type: 'setDefaultView'; view: DefaultView }
   | { type: 'openAsText' }
   | { type: 'save' };

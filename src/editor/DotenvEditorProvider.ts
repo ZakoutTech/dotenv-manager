@@ -5,7 +5,6 @@ import { toViewDocument } from '../core/viewModel';
 import type { FromWebviewMessage, ToWebviewMessage } from '../shared/protocol';
 import { DOTENV_VIEW_TYPE } from '../shared/associations';
 import { applyIntentToDocument } from './applyEdit';
-import { getDefaultView, setDefaultView } from './defaultView';
 import { reopenWith } from './reopen';
 import { createNonce, getWebviewHtml } from './webviewHtml';
 
@@ -44,10 +43,7 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
       scriptUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.js')).toString(),
       styleUri: webview.asWebviewUri(vscode.Uri.joinPath(distUri, 'webview.css')).toString(),
       cspSource: webview.cspSource,
-      initialMessages: [
-        { type: 'settings', defaultView: getDefaultView() },
-        updateMessage(document),
-      ],
+      initialMessages: [updateMessage(document)],
     });
 
     const post = (message: ToWebviewMessage): void => {
@@ -62,12 +58,6 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
         postUpdate();
       }
     });
-    const postSettings = (): void => post({ type: 'settings', defaultView: getDefaultView() });
-    const configSubscription = vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration('dotenvManager.defaultView')) {
-        postSettings();
-      }
-    });
     const saveSubscription = vscode.workspace.onDidSaveTextDocument((saved) => {
       if (saved.uri.toString() === document.uri.toString()) {
         post({ type: 'dirty', dirty: saved.isDirty });
@@ -75,18 +65,13 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
     });
     webviewPanel.onDidDispose(() => {
       changeSubscription.dispose();
-      configSubscription.dispose();
       saveSubscription.dispose();
     });
 
     webview.onDidReceiveMessage(async (message: FromWebviewMessage) => {
       switch (message.type) {
         case 'ready':
-          postSettings();
           postUpdate();
-          return;
-        case 'setDefaultView':
-          await setDefaultView(message.view);
           return;
         case 'openAsText':
           await reopenWith(document.uri, 'default');
