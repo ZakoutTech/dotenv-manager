@@ -7,6 +7,8 @@ import type {
   ViewGroup,
 } from '../shared/protocol';
 import { groupNameError, keyError } from '../shared/validation';
+import { groupDrop, keyboardGroupMove, keyboardVariableMove, variableDrop } from './dnd';
+import type { VariableMove, VariablePosition } from './dnd';
 import { EditQueue } from './editQueue';
 
 type FieldKind = 'key' | 'value' | 'comment';
@@ -27,6 +29,9 @@ interface State {
   draft: Record<string, string>;
   fieldError?: string;
   error?: string;
+  drag?: { kind: 'variable'; group: number; index: number } | { kind: 'group'; group: number };
+  /** Focus target for the render that follows the next document update (keyboard moves). */
+  focusNext?: string;
 }
 
 type Child = Node | string | null | undefined | false;
@@ -72,6 +77,60 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
   let rendering = false;
 
   const dispatch = (intent: EditIntent): void => queue.submit(intent);
+
+  const INDICATORS = ['drop-before', 'drop-after', 'drop-into', 'group-drop-before', 'group-drop-after'];
+  const counts = (): number[] => state.doc?.groups.map((g) => g.entries.length) ?? [];
+  const groupCount = (): number => state.doc?.groups.length ?? 0;
+
+  function dropPosition(event: Event, el: HTMLElement): 'before' | 'after' {
+    const rect = el.getBoundingClientRect();
+    return (event as MouseEvent).clientY < rect.top + rect.height / 2 ? 'before' : 'after';
+  }
+
+  function clearDropIndicators(): void {
+    root.querySelectorAll(INDICATORS.map((c) => `.${c}`).join(',')).forEach((el) => el.classList.remove(...INDICATORS));
+  }
+
+  function endDrag(): void {
+    state.drag = undefined;
+    clearDropIndicators();
+    root.querySelectorAll('.dragging').forEach((el) => el.classList.remove('dragging'));
+  }
+
+  function startDrag(event: Event, el: HTMLElement, drag: NonNullable<State['drag']>, label: string): void {
+    event.stopPropagation();
+    state.drag = drag;
+    const transfer = (event as DragEvent).dataTransfer;
+    if (transfer) {
+      transfer.effectAllowed = 'move';
+      transfer.setData('text/plain', label);
+    }
+    el.classList.add('dragging');
+  }
+
+  function moveVariable(from: VariablePosition, move: VariableMove | null): void {
+    if (move) {
+      dispatch({ type: 'moveVariable', ref: from, toGroup: move.toGroup, toIndex: move.toIndex });
+      state.focusNext = `move-${rowId(move.toGroup, move.toIndex)}`;
+    }
+  }
+
+  function moveGroup(from: number, to: number | null): void {
+    if (to !== null) {
+      dispatch({ type: 'moveGroup', group: from, toIndex: to });
+      state.focusNext = `drag-group-${to}`;
+    }
+  }
+
+  /** Alt+ArrowUp / Alt+ArrowDown outside inline editors; returns the direction or undefined. */
+  function moveKey(event: Event): 'up' | 'down' | undefined {
+    const { key, altKey, target } = event as KeyboardEvent;
+    if (!altKey || (key !== 'ArrowUp' && key !== 'ArrowDown') || (target as HTMLElement).classList.contains('inline-editor')) {
+      return undefined;
+    }
+    event.preventDefault();
+    return key === 'ArrowUp' ? 'up' : 'down';
+  }
 
   const groupAt = (index: number): ViewGroup | undefined => state.doc?.groups[index];
   const entryAt = (group: number, index: number): ViewEntry | undefined => groupAt(group)?.entries[index];
@@ -300,13 +359,20 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       dispatch({ type: 'updateVariable', ref: { group: g, index: i }, changes: { exported: exportBox.checked } }),
     );
 
-    return h(
+    const handle = button('⠿', 'move-variable', `move-${id}`, {
+      class: 'icon drag-handle',
+      'aria-label': `Move ${entry.key} (drag, or Alt+Up / Alt+Down)`,
+      title: 'Drag to reorder, or Alt+Up / Alt+Down',
+    });
+
+    const li = h(
       'li',
-      { class: 'row', 'data-row': id },
+      { class: 'row', 'data-row': id, draggable: editingRow ? 'false' : 'true' },
       comment,
       h(
         'div',
         { class: 'row-main' },
+        handle,
         key,
         h('span', { class: 'eq', 'aria-hidden': 'true' }, '='),
         value,
@@ -328,6 +394,37 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       ),
       editingRow ? fieldError() : null,
     );
+
+    const source = { group: g, index: i };
+    on(li, 'dragstart', (event) => startDrag(event, li, { kind: 'variable', ...source }, entry.key));
+    on(li, 'dragend', endDrag);
+    on(li, 'dragover', (event) => {
+      if (state.drag?.kind !== 'variable') {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      clearDropIndicators();
+      li.classList.add(dropPosition(event, li) === 'before' ? 'drop-before' : 'drop-after');
+    });
+    on(li, 'drop', (event) => {
+      const drag = state.drag;
+      if (drag?.kind !== 'variable') {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      endDrag();
+      const from = { group: drag.group, index: drag.index };
+      moveVariable(from, variableDrop(counts(), from, { ...source, position: dropPosition(event, li) }));
+    });
+    on(li, 'keydown', (event) => {
+      const direction = moveKey(event);
+      if (direction) {
+        moveVariable(source, keyboardVariableMove(counts(), source, direction));
+      }
+    });
+    return li;
   }
 
   function formField(name: string, label: string, multiline: boolean, placeholder: string, autofocus = false): HTMLElement {
@@ -474,18 +571,72 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       }
     }
 
-    return h(
+    const header = h(
+      'div',
+      { class: 'group-header', draggable: named ? 'true' : undefined },
+      named
+        ? button('⠿', 'drag-group', `drag-group-${g}`, {
+            class: 'icon drag-handle',
+            'aria-label': `Move group ${label} (drag, or Alt+Up / Alt+Down)`,
+            title: 'Drag to reorder groups, or Alt+Up / Alt+Down',
+          })
+        : null,
+      toggle,
+      title,
+      h('span', { class: 'count', title: `${count} variables` }, String(count)),
+      actions,
+    );
+
+    const section = h(
       'section',
       { class: named ? 'group' : 'group ungrouped', 'data-group': String(g), 'aria-label': label },
-      h('div', { class: 'group-header' }, toggle, title, h('span', { class: 'count', title: `${count} variables` }, String(count)), actions),
+      header,
       isEditing('groupName', g) ? fieldError() : null,
       comment,
       confirm,
       ...body,
     );
+
+    if (named) {
+      on(header, 'dragstart', (event) => startDrag(event, section, { kind: 'group', group: g }, label));
+      on(header, 'dragend', endDrag);
+      on(header, 'keydown', (event) => {
+        const direction = moveKey(event);
+        if (direction) {
+          moveGroup(g, keyboardGroupMove(groupCount(), g, direction));
+        }
+      });
+    }
+    on(section, 'dragover', (event) => {
+      if (!state.drag) {
+        return;
+      }
+      event.preventDefault();
+      clearDropIndicators();
+      if (state.drag.kind === 'variable') {
+        section.classList.add('drop-into');
+      } else {
+        section.classList.add(dropPosition(event, section) === 'before' ? 'group-drop-before' : 'group-drop-after');
+      }
+    });
+    on(section, 'drop', (event) => {
+      const drag = state.drag;
+      if (!drag) {
+        return;
+      }
+      event.preventDefault();
+      endDrag();
+      if (drag.kind === 'variable') {
+        const from = { group: drag.group, index: drag.index };
+        moveVariable(from, variableDrop(counts(), from, { group: g, end: true }));
+      } else {
+        moveGroup(drag.group, groupDrop(groupCount(), drag.group, g, dropPosition(event, section)));
+      }
+    });
+    return section;
   }
 
-  function render(): void {
+  function render(focusId?: string): void {
     rendering = true;
     const activeId = (document.activeElement as HTMLElement | null)?.dataset?.focusId;
 
@@ -540,9 +691,10 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
     root.replaceChildren(...children.filter((c): c is Node | string => !!c));
 
+    const wanted = focusId ?? activeId;
     const target =
       root.querySelector<HTMLElement>('[data-autofocus]') ??
-      (activeId ? root.querySelector<HTMLElement>(`[data-focus-id="${activeId}"]`) : null);
+      (wanted ? root.querySelector<HTMLElement>(`[data-focus-id="${wanted}"]`) : null);
     target?.focus();
     rendering = false;
   }
@@ -565,16 +717,19 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
 
   return {
     receive(message: ToWebviewMessage): void {
-      if (message.type === 'update') {
-        state.version = message.version;
-        state.doc = message.doc;
-        reconcileEditing();
-        queue.setVersion(message.version);
-      } else {
+      if (message.type !== 'update') {
         state.error = message.message;
         queue.failed();
+        render();
+        return;
       }
-      render();
+      state.version = message.version;
+      state.doc = message.doc;
+      reconcileEditing();
+      const focusId = state.focusNext;
+      state.focusNext = undefined;
+      render(focusId);
+      queue.setVersion(message.version);
     },
   };
 }

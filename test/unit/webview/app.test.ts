@@ -224,6 +224,94 @@ describe('editing groups', () => {
   });
 });
 
+describe('drag and drop', () => {
+  function drag(el: Element, type: string, clientY = 1): void {
+    const event = new Event(type, { bubbles: true, cancelable: true });
+    Object.defineProperty(event, 'clientY', { value: clientY });
+    el.dispatchEvent(event);
+  }
+
+  it('makes rows and named group headers draggable', () => {
+    expect(row(1, 0).getAttribute('draggable')).toBe('true');
+    expect($('.group-header', group(1)).getAttribute('draggable')).toBe('true');
+    expect($('.group-header', group(0)).getAttribute('draggable')).toBeNull();
+  });
+
+  it('reorders a variable within its group', () => {
+    drag(row(1, 0), 'dragstart');
+    drag(row(1, 1), 'dragover');
+    expect(row(1, 1).classList.contains('drop-after')).toBe(true);
+    drag(row(1, 1), 'drop');
+    expect(edits()).toEqual([{ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 1, toIndex: 1 }]);
+    expect(root.querySelector('.drop-after')).toBeNull();
+  });
+
+  it('drops before a row in another group', () => {
+    drag(row(1, 1), 'dragstart');
+    drag(row(2, 0), 'drop', -1);
+    expect(edits()).toEqual([{ type: 'moveVariable', ref: { group: 1, index: 1 }, toGroup: 2, toIndex: 0 }]);
+  });
+
+  it('drops at the end of a group when released on the group card', () => {
+    drag(row(1, 0), 'dragstart');
+    drag(group(2), 'dragover');
+    expect(group(2).classList.contains('drop-into')).toBe(true);
+    drag(group(2), 'drop');
+    expect(edits()).toEqual([{ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 2, toIndex: 1 }]);
+  });
+
+  it('ignores a drop onto the variable’s own slot', () => {
+    drag(row(1, 0), 'dragstart');
+    drag(row(1, 0), 'drop');
+    expect(edits()).toEqual([]);
+  });
+
+  it('reorders groups by dragging the header', () => {
+    drag($('.group-header', group(2)), 'dragstart');
+    drag(group(1), 'dragover', -1);
+    expect(group(1).classList.contains('group-drop-before')).toBe(true);
+    drag(group(1), 'drop', -1);
+    expect(edits()).toEqual([{ type: 'moveGroup', group: 2, toIndex: 1 }]);
+  });
+
+  it('does not render a row as draggable while it is being edited', () => {
+    $('[data-action="edit-value"]', row(1, 0)).click();
+    expect(row(1, 0).getAttribute('draggable')).toBe('false');
+  });
+});
+
+describe('keyboard moves', () => {
+  it('moves a variable with Alt+ArrowDown / Alt+ArrowUp', () => {
+    key($('[data-action="edit-key"]', row(1, 0)), 'ArrowDown', { altKey: true });
+    expect(edits()).toEqual([{ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 1, toIndex: 1 }]);
+  });
+
+  it('moves into the previous group from the top of a group', () => {
+    key($('[data-action="move-variable"]', row(1, 0)), 'ArrowUp', { altKey: true });
+    expect(edits()).toEqual([{ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 0, toIndex: 1 }]);
+  });
+
+  it('ignores Alt+Arrow inside an inline editor', () => {
+    $('[data-action="edit-value"]', row(1, 0)).click();
+    key(editor(), 'ArrowDown', { altKey: true });
+    expect(edits()).toEqual([]);
+  });
+
+  it('moves a group with Alt+ArrowUp on its header', () => {
+    key($('[data-action="rename-group"]', group(2)), 'ArrowUp', { altKey: true });
+    expect(edits()).toEqual([{ type: 'moveGroup', group: 2, toIndex: 1 }]);
+  });
+
+  it('keeps focus on the moved variable after the document updates', () => {
+    $('[data-action="move-variable"]', row(1, 0)).focus();
+    key($('[data-action="move-variable"]', row(1, 0)), 'ArrowDown', { altKey: true });
+    const moved: ViewDocument = structuredClone(DOC);
+    moved.groups[1].entries.reverse();
+    app.receive({ type: 'update', version: 2, doc: moved });
+    expect(document.activeElement?.getAttribute('data-focus-id')).toBe('move-1:1');
+  });
+});
+
 describe('sync', () => {
   it('sends edits with the latest document version', () => {
     app.receive({ type: 'update', version: 7, doc: DOC });
