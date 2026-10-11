@@ -16,17 +16,29 @@ A visual editor for `.env` files in VS Code. Organize variables into commented g
   - Undefined references and reference cycles appear as warnings in the editor and in the **Problems** panel.
   - Renaming a variable offers to update every reference to it.
 - **Find every .env file.**
-  - The status bar shows **Dotenv Manager (n)**, with n the number of `.env` files in the workspace. Click it for a searchable list of them, with variable counts.
+  - The status bar shows **Dotenv Manager (n)**, with n the number of listed `.env` files in the workspace. Click it for a searchable list of them, with variable counts.
   - A **Dotenv Files** panel in the Explorer always lists them.
   - Both search all workspace folders at any depth and update as files are created, deleted or renamed. `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage` and `vendor` are skipped by default; change that with `dotenvManager.exclude`.
-- **Create .env files.** Use the selector, the panel, or right-click a folder in the Explorer. Paths like `apps/api/.env.local` work, and existing files are never overwritten.
+- **Create .env files.** Use the selector, the panel, or right-click a folder in the Explorer. Paths like `apps/api/.env.local` work, the name must be one from `dotenvManager.envFiles`, and existing files are never overwritten.
 - **Masked values.** Values are hidden until you click **Show** on a row or tick **Show values**.
 - **Safe editing.** Every action is a normal edit to the text document, so undo/redo, save and the unsaved-changes marker work as usual. You can keep the text editor open beside the GUI; both stay in sync.
 - **Lossless.** Lines you don't touch are written back exactly as they were: quotes, `export`, inline comments, multiline values, CRLF line endings and lines the parser doesn't understand.
 
 ## Usage
 
-`.env`, `.env.*` and `*.env` files open in Dotenv Manager by default. To open one in Dotenv Manager from elsewhere (for example when you chose the text editor as default):
+### Which files
+
+Dotenv Manager only handles the file names listed in the **Dotenv Manager › Env Files** setting (`dotenvManager.envFiles`). The default list is:
+
+```json
+"dotenvManager.envFiles": [".env", ".env.local", ".env.development", ".env.production", ".env.test", ".env.example"]
+```
+
+Add or remove names to change what is detected, counted and opened in Dotenv Manager, e.g. `".env.staging"`. Entries are file names (no folders) and may use `*`, `?`, `{a,b}` and `[abc]`, e.g. `".env.*.local"`. Every other file, including look-alikes such as `.env.ts` or `.env.json`, keeps its usual editor.
+
+### Opening files
+
+Listed files open in Dotenv Manager by default. To open one in Dotenv Manager from elsewhere (for example when you chose the text editor as default):
 
 - right-click it in the **Explorer** and choose **Open with Dotenv Manager**,
 - click the **Open with Dotenv Manager** button (the **E** icon) in the editor title bar,
@@ -45,13 +57,13 @@ To see the raw text, click **Open as text** in the Dotenv Manager toolbar or the
 
 ### Choosing the default editor
 
-Pick which editor opens `.env` files in any of these places:
+Pick which editor opens the listed files in any of these places:
 
 - the **Open .env files with** dropdown in the Dotenv Manager toolbar,
 - **Dotenv Manager: Choose Default Editor for .env Files** in the Command Palette,
 - the **Dotenv Manager › Default View** setting (`dotenvManager.defaultView`: `visual` or `text`).
 
-Dotenv Manager applies the choice by updating the matching entries in VS Code's `workbench.editorAssociations` setting. It writes to your user settings, or to the workspace settings if you set `dotenvManager.defaultView` per workspace.
+Dotenv Manager applies the choice by adding one `workbench.editorAssociations` entry per listed name, and removes its entries again when you take a name off the list. It writes to your user settings, or to the workspace settings if you set `dotenvManager.defaultView` per workspace. If you uninstall the extension, VS Code ignores the leftover entries and opens the files as text.
 
 | Action | How |
 |---|---|
@@ -88,7 +100,8 @@ When the GUI moves or sorts variables, it inserts a blank line where needed so a
 
 | Setting | Default | Description |
 |---|---|---|
-| `dotenvManager.defaultView` | `visual` | Editor used when you open a `.env` file: `visual` (Dotenv Manager) or `text` |
+| `dotenvManager.envFiles` | `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.example` | File names Dotenv Manager detects and opens; nothing else is touched |
+| `dotenvManager.defaultView` | `visual` | Editor used when you open a listed file: `visual` (Dotenv Manager) or `text` |
 | `dotenvManager.exclude` | `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage`, `vendor` (as `**/…`) | Glob patterns not searched for `.env` files |
 | `dotenvManager.statusBar.enabled` | `true` | Show **Dotenv Manager (n)** in the status bar |
 

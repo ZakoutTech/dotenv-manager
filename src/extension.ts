@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { EditError } from './core/edits';
 import type { EnvFile } from './core/envFileList';
+import { literalEnvFileNames } from './shared/envFiles';
 import type { EditIntent } from './shared/protocol';
 import { targetUri } from './editor/activeEnv';
 import { applyIntentToDocument } from './editor/applyEdit';
@@ -8,6 +9,7 @@ import { createEnvFile } from './editor/createEnvFile';
 import { registerDefaultView } from './editor/defaultView';
 import { registerDiagnostics } from './editor/diagnostics';
 import { EnvFileIndex } from './editor/envFileIndex';
+import { configuredEnvFiles, ENV_FILES_SETTING } from './editor/envFileSettings';
 import { selectEnvFile } from './editor/envFilePicker';
 import { registerEnvFileTree, type EnvFileTreeProvider } from './editor/envFileTree';
 import { reopenWith } from './editor/reopen';
@@ -32,9 +34,31 @@ function withTarget(run: (uri: vscode.Uri) => Promise<unknown>): (arg?: unknown)
   };
 }
 
+/**
+ * Menus show "Open with Dotenv Manager" for `resourceFilename in dotenvManager.envFileNames`:
+ * the literal names of the envFiles setting plus the names of the detected files (for glob patterns).
+ */
+function registerMenuContext(context: vscode.ExtensionContext, index: EnvFileIndex): void {
+  const update = (): void => {
+    const detected = index.list().map((f) => f.relativePath.slice(f.relativePath.lastIndexOf('/') + 1));
+    const names = [...new Set([...literalEnvFileNames(configuredEnvFiles()), ...detected])];
+    void vscode.commands.executeCommand('setContext', 'dotenvManager.envFileNames', names);
+  };
+  update();
+  context.subscriptions.push(
+    index.onDidChange(update),
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration(ENV_FILES_SETTING)) {
+        update();
+      }
+    }),
+  );
+}
+
 export function activate(context: vscode.ExtensionContext): DotenvManagerApi {
   const index = new EnvFileIndex();
   context.subscriptions.push(index);
+  registerMenuContext(context, index);
 
   registerDiagnostics(context);
   registerDefaultView(context);

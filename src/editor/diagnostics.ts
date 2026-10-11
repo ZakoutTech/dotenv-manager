@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import { computeProblems } from '../core/diagnostics';
-import { isEnvFileName } from '../shared/envFiles';
+import { isEnvFile } from './envFileSettings';
 
 function isEnvDocument(document: vscode.TextDocument): boolean {
-  return isEnvFileName(document.uri.path.split('/').pop() ?? '');
+  return isEnvFile(document.uri);
 }
 
 /** Publish undefined-reference and cycle warnings for open .env documents to the Problems panel. */

@@ -4,7 +4,8 @@
 
 Initial release.
 
-- Visual custom editor for `.env`, `.env.*` and `*.env` files that stays in sync with the text editor and supports undo/redo.
+- Visual custom editor for `.env` files that stays in sync with the text editor and supports undo/redo.
+- `dotenvManager.envFiles` setting: the only file names that are detected and opened (default `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.example`). Other files, such as `.env.ts`, keep their own editors.
 - Groups (`# === Name ===` headers) with group comments, and comments above each variable.
 - Add, edit, rename and delete variables and groups; masked values with per-row and global reveal; export toggle; duplicate-key badges.
 - Drag-and-drop and Alt+Up/Alt+Down reordering of variables (within and across groups) and of groups.

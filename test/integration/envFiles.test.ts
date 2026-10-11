@@ -77,7 +77,11 @@ suite('Workspace .env files', () => {
     const item = tree.getTreeItem(nodes[1]);
     assert.strictEqual(item.description, 'apps/api');
     assert.strictEqual(item.contextValue, 'dotenvManager.envFile');
-    assert.strictEqual(item.command?.command, 'vscode.open');
+    assert.strictEqual(item.command?.command, 'dotenvManager.openEnvFile');
+    await vscode.commands.executeCommand(item.command.command, ...(item.command.arguments ?? []));
+    const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+    assert.ok(input instanceof vscode.TabInputCustom && input.uri.path.endsWith('apps/api/.env.local'));
+    await vscode.commands.executeCommand('workbench.action.closeAllEditors');
   });
 
   test('view item actions open the clicked file', async () => {
@@ -149,6 +153,30 @@ suite('Workspace .env files', () => {
     }
     assert.deepStrictEqual(
       await waitFor(() => relativePaths(a), (p) => p.join() === ['sample.env', 'apps/api/.env.local'].join()),
+      ['sample.env', 'apps/api/.env.local'],
+    );
+  });
+
+  test('detects only the names listed in dotenvManager.envFiles', async () => {
+    const a = await api();
+    const config = vscode.workspace.getConfiguration('dotenvManager');
+    const listed = config.inspect<string[]>('envFiles')?.workspaceValue ?? [];
+    const ts = path.join(root(), '.env.ts');
+    fs.writeFileSync(ts, 'export {};\n');
+    try {
+      await a.rescan();
+      assert.deepStrictEqual(relativePaths(a), ['sample.env', 'apps/api/.env.local']);
+      await config.update('envFiles', ['.env.local'], vscode.ConfigurationTarget.Workspace);
+      assert.deepStrictEqual(
+        await waitFor(() => relativePaths(a), (p) => p.join() === 'apps/api/.env.local'),
+        ['apps/api/.env.local'],
+      );
+    } finally {
+      fs.rmSync(ts, { force: true });
+      await config.update('envFiles', listed, vscode.ConfigurationTarget.Workspace);
+    }
+    assert.deepStrictEqual(
+      await waitFor(() => relativePaths(a), (p) => p.length === 2),
       ['sample.env', 'apps/api/.env.local'],
     );
   });

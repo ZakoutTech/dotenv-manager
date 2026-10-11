@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import { newEnvFilePathError, normalizeNewEnvFilePath } from '../shared/newEnvFile';
+import { openEnvFile } from './defaultView';
+import { configuredEnvFiles } from './envFileSettings';
 
 /**
  * Folder to create the file in: an Explorer folder, a "Dotenv Files" folder node, the only
@@ -47,17 +49,17 @@ export async function createEnvFile(arg?: unknown, pathArg?: string): Promise<vs
     pathArg ??
     (await vscode.window.showInputBox({
       title: 'Create .env File',
-      prompt: `Path relative to ${vscode.workspace.asRelativePath(base, true) || base.path}`,
+      prompt: `Path relative to ${vscode.workspace.asRelativePath(base, true) || base.path}. Detected names: ${configuredEnvFiles().join(', ')}`,
       value: '.env',
       valueSelection: [0, 4],
       validateInput: async (value) =>
-        newEnvFilePathError(value) ??
+        newEnvFilePathError(value, configuredEnvFiles()) ??
         ((await exists(target(value))) ? `${normalizeNewEnvFilePath(value)} already exists.` : undefined),
     }));
   if (input === undefined) {
     return undefined;
   }
-  const error = newEnvFilePathError(input);
+  const error = newEnvFilePathError(input, configuredEnvFiles());
   if (error) {
     void vscode.window.showErrorMessage(error);
     return undefined;
@@ -68,13 +70,13 @@ export async function createEnvFile(arg?: unknown, pathArg?: string): Promise<vs
     // Don't wait for the notification: callers get their answer right away.
     void vscode.window.showWarningMessage(`${normalizeNewEnvFilePath(input)} already exists.`, 'Open').then((choice) => {
       if (choice === 'Open') {
-        void vscode.commands.executeCommand('vscode.open', uri);
+        void openEnvFile(uri);
       }
     });
     return undefined;
   }
   await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(uri, '..'));
   await vscode.workspace.fs.writeFile(uri, new Uint8Array());
-  await vscode.commands.executeCommand('vscode.open', uri);
+  await openEnvFile(uri);
   return uri;
 }

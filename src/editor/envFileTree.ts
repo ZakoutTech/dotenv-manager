@@ -46,7 +46,7 @@ export class EnvFileTreeProvider implements vscode.TreeDataProvider<EnvTreeNode>
     item.description = dirOf(node.relativePath);
     item.tooltip = node.relativePath;
     item.contextValue = 'dotenvManager.envFile';
-    item.command = { command: 'vscode.open', title: 'Open', arguments: [uri] };
+    item.command = { command: 'dotenvManager.openEnvFile', title: 'Open', arguments: [uri] };
     return item;
   }
 

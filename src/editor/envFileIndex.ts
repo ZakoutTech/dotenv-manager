@@ -1,10 +1,10 @@
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { sortEnvFiles, type EnvFile } from '../core/envFileList';
-import { isEnvFileName } from '../shared/envFiles';
+import { envFilesInclude } from '../shared/envFiles';
 import { createExcludeMatcher, DEFAULT_EXCLUDES, findFilesExclude } from '../shared/excludes';
+import { configuredEnvFiles, ENV_FILES_SETTING, isEnvFile } from './envFileSettings';
 
-const INCLUDE = '**/{.env,.env.*,*.env}';
 export const MAX_FILES = 1000;
 const NEW_FOLDER_DELAY_MS = 500;
 
@@ -15,7 +15,7 @@ function excludePatterns(): string[] {
 
 type Change = { op: 'add'; file: EnvFile } | { op: 'remove'; uri: string };
 
-/** Live list of the .env files in the workspace folders (recursive, common build/vendor dirs skipped). */
+/** Live list of the workspace files named in `dotenvManager.envFiles` (recursive, excluded folders skipped). */
 export class EnvFileIndex implements vscode.Disposable {
   private files = new Map<string, EnvFile>();
   private scan: Promise<void> | undefined;
@@ -47,6 +47,8 @@ export class EnvFileIndex implements vscode.Disposable {
         if (e.affectsConfiguration('dotenvManager.exclude')) {
           this.isExcluded = createExcludeMatcher(excludePatterns());
           this.findExclude = findFilesExclude(excludePatterns());
+        }
+        if (e.affectsConfiguration('dotenvManager.exclude') || e.affectsConfiguration(ENV_FILES_SETTING)) {
           void this.rescan();
         }
       }),
@@ -78,8 +80,9 @@ export class EnvFileIndex implements vscode.Disposable {
     const generation = ++this.generation;
     this.changesDuringScan = [];
     const scan = (async () => {
+      const include = envFilesInclude(configuredEnvFiles());
       // An explicit exclude (even an empty one) replaces files.exclude, like the setting's defaults intend.
-      const uris = await vscode.workspace.findFiles(INCLUDE, this.findExclude ?? null, MAX_FILES);
+      const uris = include ? await vscode.workspace.findFiles(include, this.findExclude ?? null, MAX_FILES) : [];
       if (generation !== this.generation) {
         return; // A newer scan started; its result wins.
       }
@@ -138,9 +141,10 @@ export class EnvFileIndex implements vscode.Disposable {
     this.newFolders.clear();
     // Skip folders nested in another new folder: the outer search covers them.
     const roots = folders.filter((f, i) => !folders.slice(0, i).some((outer) => f.startsWith(`${outer}/`)));
-    for (const root of roots) {
+    const include = envFilesInclude(configuredEnvFiles());
+    for (const root of include ? roots : []) {
       const uris = await vscode.workspace.findFiles(
-        new vscode.RelativePattern(vscode.Uri.parse(root), INCLUDE),
+        new vscode.RelativePattern(vscode.Uri.parse(root), include ?? ''),
         this.findExclude ?? null,
         MAX_FILES,
       );
@@ -160,7 +164,7 @@ export class EnvFileIndex implements vscode.Disposable {
 
   private toEnvFile(uri: vscode.Uri): EnvFile | undefined {
     const folder = vscode.workspace.getWorkspaceFolder(uri);
-    if (!folder || !isEnvFileName(path.posix.basename(uri.path))) {
+    if (!folder || !isEnvFile(uri)) {
       return undefined;
     }
     const relativePath = path.posix.relative(folder.uri.path, uri.path);

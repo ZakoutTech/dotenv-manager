@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DOTENV_VIEW_TYPE } from '../shared/associations';
-import { isEnvFileName } from '../shared/envFiles';
+import { isEnvFile } from './envFileSettings';
 
 /** URI of the active .env document, whether shown as text or in the Dotenv Manager editor. */
 export function activeEnvUri(): vscode.Uri | undefined {
@@ -10,7 +10,7 @@ export function activeEnvUri(): vscode.Uri | undefined {
   }
   const uri = vscode.window.activeTextEditor?.document.uri;
   // Commands can also be run from keybindings, which ignore menu `when` clauses: never act on other files.
-  return uri && isEnvFileName(uri.path.slice(uri.path.lastIndexOf('/') + 1)) ? uri : undefined;
+  return uri && isEnvFile(uri) ? uri : undefined;
 }
 
 /**

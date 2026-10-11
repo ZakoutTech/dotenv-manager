@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DOTENV_VIEW_TYPE, nextAssociations, type DefaultView } from '../shared/associations';
+import { configuredEnvFiles, ENV_FILES_SETTING } from './envFileSettings';
 
 const SECTION = 'dotenvManager';
 const KEY = 'defaultView';
@@ -20,16 +21,21 @@ export async function setDefaultView(view: DefaultView): Promise<void> {
   await applyDefaultView();
 }
 
-/** Make `workbench.editorAssociations` match `dotenvManager.defaultView`. */
+/** Make `workbench.editorAssociations` open the `dotenvManager.envFiles` names in `dotenvManager.defaultView`. */
 export async function applyDefaultView(): Promise<void> {
   const target = settingsTarget();
   const workbench = vscode.workspace.getConfiguration('workbench');
   const inspected = workbench.inspect<Record<string, string>>('editorAssociations');
   const current = target === vscode.ConfigurationTarget.Workspace ? inspected?.workspaceValue : inspected?.globalValue;
-  const next = nextAssociations(current, getDefaultView(), DOTENV_VIEW_TYPE);
+  const next = nextAssociations(current, getDefaultView(), DOTENV_VIEW_TYPE, configuredEnvFiles());
   if (next) {
     await workbench.update('editorAssociations', next, target);
   }
+}
+
+/** Open a detected .env file in the default view, even before the editor associations are written. */
+export async function openEnvFile(uri: vscode.Uri): Promise<void> {
+  await vscode.commands.executeCommand('vscode.openWith', uri, getDefaultView() === 'text' ? 'default' : DOTENV_VIEW_TYPE);
 }
 
 export async function chooseDefaultView(): Promise<void> {
@@ -49,10 +55,17 @@ export function registerDefaultView(context: vscode.ExtensionContext): void {
   void applyDefaultView();
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration(`${SECTION}.${KEY}`)) {
+      // Also re-applied when the associations change, e.g. when a test or the user clears them.
+      if (
+        e.affectsConfiguration(`${SECTION}.${KEY}`) ||
+        e.affectsConfiguration(ENV_FILES_SETTING) ||
+        e.affectsConfiguration('workbench.editorAssociations')
+      ) {
         void applyDefaultView();
       }
     }),
     vscode.commands.registerCommand('dotenvManager.chooseDefaultView', chooseDefaultView),
+    // Internal: open a detected file (Dotenv Files view items).
+    vscode.commands.registerCommand('dotenvManager.openEnvFile', openEnvFile),
   );
 }

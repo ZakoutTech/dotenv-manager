@@ -1,4 +1,4 @@
-import { isEnvFileName } from './envFiles';
+import { createEnvFileMatcher } from './envFiles';
 
 /** `./apps\api//.env` → `apps/api/.env` */
 export function normalizeNewEnvFilePath(input: string): string {
@@ -10,8 +10,11 @@ export function normalizeNewEnvFilePath(input: string): string {
     .join('/');
 }
 
-/** Problem with a path typed for a new .env file (relative to a workspace folder), or undefined. */
-export function newEnvFilePathError(input: string): string | undefined {
+/**
+ * Problem with a path typed for a new .env file (relative to a workspace folder), or undefined.
+ * The name must match one of `patterns` (the `dotenvManager.envFiles` setting), or the file would not be detected.
+ */
+export function newEnvFilePathError(input: string, patterns: readonly string[]): string | undefined {
   const raw = input.trim().replace(/\\/g, '/');
   if (raw === '') {
     return 'Enter a file name, e.g. .env or apps/api/.env.local.';
@@ -23,8 +26,11 @@ export function newEnvFilePathError(input: string): string | undefined {
   if (segments.includes('..')) {
     return 'The file must stay inside the folder.';
   }
-  if (!isEnvFileName(segments[segments.length - 1] ?? '')) {
-    return 'The file must be named .env, .env.<name> or <name>.env.';
+  if (patterns.length === 0) {
+    return 'The Dotenv Manager "Env Files" setting is empty: add the file names to detect first.';
+  }
+  if (!createEnvFileMatcher(patterns)(segments[segments.length - 1] ?? '')) {
+    return `Use one of the names in the Dotenv Manager "Env Files" setting: ${patterns.join(', ')}.`;
   }
   return undefined;
 }
