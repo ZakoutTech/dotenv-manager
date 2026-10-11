@@ -510,3 +510,45 @@ describe('commented-out variables', () => {
     expect(toggle().disabled).toBe(true);
   });
 });
+
+describe('text preview pane', () => {
+  const TEXT = '# === Database ===\nDB_HOST=localhost\n# OLD=1\n';
+  beforeEach(() => {
+    app.receive({ type: 'update', version: 2, doc: DOC, text: TEXT });
+  });
+  const checkbox = (): HTMLInputElement => $<HTMLInputElement>('[data-action="show-preview"]');
+
+  it('sits next to "Sort all A→Z" and is off by default', () => {
+    expect(checkbox().closest('label')?.previousElementSibling?.getAttribute('data-action')).toBe('sort-all');
+    expect(root.querySelector('.text-preview')).toBeNull();
+  });
+
+  it('splits the view with the highlighted text on the right, values masked', () => {
+    checkbox().click();
+    const split = $('.split');
+    expect(split.children[0].classList.contains('split-main')).toBe(true);
+    expect($$('[data-group]', split.children[0] as HTMLElement).length).toBeGreaterThan(0);
+    expect(split.children[1].classList.contains('text-preview')).toBe(true);
+    const lines = $$('.text-preview .line');
+    expect(lines.map((l) => $('.ln', l).textContent)).toEqual(['1', '2', '3']);
+    expect($('.tok-header', lines[0]).textContent).toBe('# === Database ===');
+    expect($('.tok-value', lines[1]).textContent).toBe('••••••••');
+    expect(lines[2].classList.contains('disabled')).toBe(true);
+  });
+
+  it('shows values with "Show values" and follows document updates', () => {
+    checkbox().click();
+    $('[data-action="reveal-all"]').click();
+    expect($('.text-preview .tok-value').textContent).toBe('localhost');
+    app.receive({ type: 'update', version: 3, doc: DOC, text: 'A=changed\n' });
+    expect($$('.text-preview .line')).toHaveLength(1);
+    expect($('.text-preview .tok-value').textContent).toBe('changed');
+  });
+
+  it('closes again when unchecked', () => {
+    checkbox().click();
+    checkbox().click();
+    expect(root.querySelector('.split')).toBeNull();
+    expect($$('[data-group]').length).toBeGreaterThan(0);
+  });
+});

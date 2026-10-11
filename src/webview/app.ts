@@ -12,6 +12,7 @@ import { groupDrop, keyboardGroupMove, variableDrop } from './dnd';
 import type { VariableMove, VariablePosition } from './dnd';
 import { attachCompletion } from './completion';
 import { EditQueue } from './editQueue';
+import { tokenizeEnv } from './textPreview';
 
 type FieldKind = 'key' | 'value' | 'comment';
 
@@ -28,6 +29,10 @@ interface State {
   revealed: Set<string>;
   /** Show commented-out variables (`# KEY=value`). */
   showDisabled: boolean;
+  /** Show the .env text in a pane to the right. */
+  showPreview: boolean;
+  /** Current document text (for the preview pane). */
+  text?: string;
   editing?: Editing;
   /** In-progress text of the open editor(s), keyed by field name (`text` for single-field editors). */
   draft: Record<string, string>;
@@ -79,7 +84,7 @@ export interface App {
 
 export function createApp(root: HTMLElement, post: (message: FromWebviewMessage) => void): App {
   const queue = new EditQueue(post);
-  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), showDisabled: false, draft: {} };
+  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), showDisabled: false, showPreview: false, draft: {} };
   let rendering = false;
 
   const dispatch = (intent: EditIntent): void => queue.submit(intent);
@@ -772,6 +777,38 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     return h('label', { class: 'default-view' }, 'Open .env files with', select);
   }
 
+  /** Read-only, highlighted .env text; values follow the "Show values" mask. */
+  function renderTextPreview(): HTMLElement {
+    const lines = tokenizeEnv(state.text ?? '');
+    const code = h(
+      'pre',
+      { class: 'text-preview-code', 'aria-label': '.env text' },
+      ...lines.map((line, n) =>
+        h(
+          'div',
+          { class: line.disabled ? 'line disabled' : 'line' },
+          h('span', { class: 'ln', 'aria-hidden': 'true' }, String(n + 1)),
+          h(
+            'span',
+            { class: 'code' },
+            ...line.tokens.map((t) => h('span', { class: `tok-${t.kind}` }, t.kind === 'value' && !state.revealAll ? MASK : t.text)),
+          ),
+        ),
+      ),
+    );
+    return h(
+      'aside',
+      { class: 'text-preview', 'aria-label': 'Preview of the .env file' },
+      h(
+        'div',
+        { class: 'text-preview-title' },
+        h('span', {}, 'Preview'),
+        h('span', { class: 'text-preview-hint' }, state.revealAll ? 'read-only' : 'read-only · values hidden'),
+      ),
+      lines.length > 0 ? code : h('p', { class: 'empty-hint' }, 'The file is empty.'),
+    );
+  }
+
   function render(focusId?: string): void {
     rendering = true;
     const activeId = (document.activeElement as HTMLElement | null)?.dataset?.focusId;
@@ -794,6 +831,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       state.showDisabled = showDisabled.checked;
       render();
     });
+    const showPreview = h('input', { type: 'checkbox', 'data-action': 'show-preview', 'data-focus-id': 'show-preview', checked: state.showPreview });
+    on(showPreview, 'change', () => {
+      state.showPreview = showPreview.checked;
+      render();
+    });
     children.push(
       h(
         'div',
@@ -802,6 +844,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         on(button('Sort all A→Z', 'sort-all', 'sort-all', { title: 'Sort the variables of every group alphabetically' }), 'click', () =>
           dispatch({ type: 'sortAll' }),
         ),
+        h('label', { class: 'show-preview', title: 'Show the .env text to the right' }, showPreview, 'Preview'),
         h('label', { class: 'reveal-all' }, revealAll, 'Show values'),
         h(
           'label',
@@ -851,7 +894,13 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       });
     }
 
-    root.replaceChildren(...children.filter((c): c is Node | string => !!c));
+    const [toolbar, ...content] = children.filter((c): c is Node | string => !!c);
+    root.replaceChildren(
+      toolbar,
+      ...(state.showPreview
+        ? [h('div', { class: 'split' }, h('div', { class: 'split-main' }, ...content), renderTextPreview())]
+        : content),
+    );
 
     const wanted = focusId ?? activeId;
     const target =
@@ -892,6 +941,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       }
       state.version = message.version;
       state.doc = message.doc;
+      state.text = message.text ?? state.text;
       reconcileEditing();
       const focusId = state.focusNext;
       state.focusNext = undefined;

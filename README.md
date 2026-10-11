@@ -21,6 +21,7 @@ A visual editor for `.env` files in VS Code. Organize variables into commented g
   - Both search all workspace folders at any depth and update as files are created, deleted or renamed. `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage` and `vendor` are skipped by default; change that with `dotenvManager.exclude`.
 - **Create .env files.** Use the selector, the panel, or right-click a folder in the Explorer. Paths like `apps/api/.env.local` work, the name must be one from `dotenvManager.envFiles`, and existing files are never overwritten.
 - **Commented-out variables.** Lines like `# API_KEY=old-value` are recognised as variables that are switched off. Tick **Show commented (n)** in the toolbar to see them (greyed out, marked *commented*), and use **Comment out** / **Uncomment** on any row to switch a variable off or on. dotenv ignores them, so they never count as definitions, duplicates or reference targets.
+- **Text preview.** Tick **Preview** next to **Sort all A→Z** to split the editor: the GUI stays on the left and the file's text appears on the right, highlighted and updated with every change. It is read-only and hides values unless **Show values** is ticked; use **Open as text** to edit the text directly.
 - **Masked values.** Values are hidden until you click **Show** on a row or tick **Show values**.
 - **Safe editing.** Every action is a normal edit to the text document, so undo/redo, save and the unsaved-changes marker work as usual. You can keep the text editor open beside the GUI; both stay in sync.
 - **Lossless.** Lines you don't touch are written back exactly as they were: quotes, `export`, inline comments, multiline values, CRLF line endings and lines the parser doesn't understand.
@@ -73,6 +74,7 @@ Dotenv Manager applies the choice by adding one `workbench.editorAssociations` e
 | Add a group | **+ Group** in the toolbar |
 | Move a variable or group | Drag the ⠿ handle, or <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd> |
 | Sort | **Sort A→Z** on a group, **Sort all A→Z** in the toolbar |
+| See the file text beside the GUI | Tick **Preview** in the toolbar |
 | Comment out / uncomment a variable | **Comment out** or **Uncomment** on the row. Tick **Show commented (n)** to see commented-out variables. |
 | Delete a group | **Delete** on the group card. You can keep its variables; they move to the group above. |
 

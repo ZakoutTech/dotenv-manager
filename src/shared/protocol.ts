@@ -68,7 +68,8 @@ export interface ViewDocument {
 }
 
 export type ToWebviewMessage =
-  | { type: 'update'; version: number; doc: ViewDocument }
+  /** `text` is the document text, for the read-only preview pane. */
+  | { type: 'update'; version: number; doc: ViewDocument; text?: string }
   | { type: 'error'; message: string }
   | { type: 'settings'; defaultView: DefaultView };
 

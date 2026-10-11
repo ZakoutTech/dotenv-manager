@@ -9,6 +9,11 @@ import { getDefaultView, setDefaultView } from './defaultView';
 import { reopenWith } from './reopen';
 import { createNonce, getWebviewHtml } from './webviewHtml';
 
+function updateMessage(document: vscode.TextDocument): ToWebviewMessage {
+  const text = document.getText();
+  return { type: 'update', version: document.version, doc: toViewDocument(parse(text)), text };
+}
+
 /**
  * Custom text editor: the TextDocument stays the source of truth (so undo/redo,
  * dirty state and save are native). The webview renders a view model of the
@@ -41,7 +46,7 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
       cspSource: webview.cspSource,
       initialMessages: [
         { type: 'settings', defaultView: getDefaultView() },
-        { type: 'update', version: document.version, doc: toViewDocument(parse(document.getText())) },
+        updateMessage(document),
       ],
     });
 
@@ -49,7 +54,7 @@ export class DotenvEditorProvider implements vscode.CustomTextEditorProvider {
       void webview.postMessage(message);
     };
     const postUpdate = (): void => {
-      post({ type: 'update', version: document.version, doc: toViewDocument(parse(document.getText())) });
+      post(updateMessage(document));
     };
 
     const changeSubscription = vscode.workspace.onDidChangeTextDocument((e) => {

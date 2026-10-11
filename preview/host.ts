@@ -67,7 +67,7 @@ function publish(): void {
   }
   undoButton.disabled = undoStack.length === 0;
   redoButton.disabled = redoStack.length === 0;
-  send({ type: 'update', version, doc: toViewDocument(parse(text)) });
+  send({ type: 'update', version, doc: toViewDocument(parse(text)), text });
 }
 
 /** Replace the document text, recording an undo step (like one WorkspaceEdit). */
