@@ -15,6 +15,12 @@ async function waitFor<T>(read: () => T, done: (value: T) => boolean, timeoutMs 
   return value;
 }
 
+/** `undo` acts on the focused editor; focus the document first so a stray focus change can't make it a no-op. */
+async function undo(doc: vscode.TextDocument): Promise<void> {
+  await vscode.window.showTextDocument(doc, { preserveFocus: false });
+  await vscode.commands.executeCommand('undo');
+}
+
 const ORIGINAL ='# === Database ===\n# Connection settings\n\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n';
 
 suite('Dotenv Manager editing', () => {
@@ -50,9 +56,9 @@ suite('Dotenv Manager editing', () => {
     await applyEdit({ type: 'updateVariable', ref: { group: 1, index: 0 }, changes: { value: '6543' } });
     assert.strictEqual(doc.getText(), '# === Database ===\n# Connection settings\n\nDB_PORT=6543\n# Hostname\nDB_HOST=localhost\n');
 
-    await vscode.commands.executeCommand('undo');
+    await undo(doc);
     assert.strictEqual(doc.getText(), '# === Database ===\n# Connection settings\n\nDB_PORT=5432\n# Hostname\nDB_HOST=localhost\n');
-    await vscode.commands.executeCommand('undo');
+    await undo(doc);
     assert.strictEqual(doc.getText(), ORIGINAL);
   });
 
@@ -81,7 +87,7 @@ suite('Dotenv Manager editing', () => {
     await applyEdit({ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 1, toIndex: 2 });
     await vscode.commands.executeCommand('dotenvManager.sortAll');
     assert.ok(doc.getText().includes('\nAPI=1\n# Hostname\nDB_HOST'));
-    await vscode.commands.executeCommand('undo');
+    await undo(doc);
     assert.ok(doc.getText().endsWith('DB_PORT=5432\nAPI=1\n'));
   });
 
@@ -108,7 +114,7 @@ suite('Dotenv Manager editing', () => {
     await applyEdit({ type: 'renameVariable', ref: { group: 1, index: 0 }, key: 'PGHOST', updateReferences: true });
     assert.ok(doc.getText().includes('PGHOST=localhost\n'));
     assert.ok(doc.getText().endsWith('DB_URL=${PGHOST}:$DB_PORT\n'));
-    await vscode.commands.executeCommand('undo');
+    await undo(doc);
     assert.ok(doc.getText().endsWith('DB_URL=${DB_HOST}:$DB_PORT\n'));
     assert.ok(doc.getText().includes('DB_HOST=localhost\n'));
   });
