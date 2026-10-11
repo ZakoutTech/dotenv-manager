@@ -11,6 +11,6 @@ node_modules/**
 .gitignore
 esbuild.mjs
 eslint.config.mjs
-vitest.config.ts
+vitest.config.mts
 tsconfig*.json
 .vscode-test.mjs
