@@ -15,6 +15,14 @@ export function activate(context: vscode.ExtensionContext): void {
       }
       await vscode.commands.executeCommand('vscode.openWith', target, DotenvEditorProvider.viewType);
     }),
+    vscode.commands.registerCommand('dotenvManager.sortAll', async (uri?: vscode.Uri) => {
+      const target = uri ?? activeEnvUri();
+      if (!target) {
+        void vscode.window.showInformationMessage('Open a .env file first.');
+        return;
+      }
+      await applyIntentToDocument(await vscode.workspace.openTextDocument(target), { type: 'sortAll' });
+    }),
     // Internal: apply an edit intent to a .env document (used by commands and tests).
     vscode.commands.registerCommand('dotenvManager.applyEdit', async (uri: vscode.Uri, intent: EditIntent) => {
       const document = await vscode.workspace.openTextDocument(uri);
@@ -29,6 +37,15 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
   );
+}
+
+/** URI of the active .env document, whether shown as text or in the Dotenv Manager editor. */
+function activeEnvUri(): vscode.Uri | undefined {
+  const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
+  if (input instanceof vscode.TabInputCustom && input.viewType === DotenvEditorProvider.viewType) {
+    return input.uri;
+  }
+  return vscode.window.activeTextEditor?.document.uri;
 }
 
 export function deactivate(): void {}

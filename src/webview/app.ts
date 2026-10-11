@@ -512,6 +512,14 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
             startEditing({ kind: 'deleteGroup', group: g }, {}),
           )
         : null,
+      on(
+        button('Sort A→Z', 'sort-group', `sort-group-${g}`, {
+          title: `Sort the variables of ${label} alphabetically`,
+          disabled: count < 2,
+        }),
+        'click',
+        () => dispatch({ type: 'sortGroup', group: g }),
+      ),
       on(button('+ Variable', 'add-variable', `add-variable-${g}`, { title: `Add a variable to ${label}` }), 'click', () =>
         startEditing({ kind: 'newVariable', group: g }, {}),
       ),
@@ -651,6 +659,9 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         'div',
         { class: 'toolbar', role: 'toolbar', 'aria-label': 'Dotenv Manager' },
         on(button('+ Group', 'add-group', 'add-group', { class: 'primary' }), 'click', () => startEditing({ kind: 'newGroup' }, {})),
+        on(button('Sort all A→Z', 'sort-all', 'sort-all', { title: 'Sort the variables of every group alphabetically' }), 'click', () =>
+          dispatch({ type: 'sortAll' }),
+        ),
         h('label', { class: 'reveal-all' }, revealAll, 'Show values'),
       ),
     );

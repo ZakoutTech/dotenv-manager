@@ -54,6 +54,27 @@ suite('Dotenv Manager editing', () => {
     assert.strictEqual(doc.isDirty, true);
   });
 
+  test('"Sort All Groups" works from the text editor as one undo step', async () => {
+    const doc = await vscode.workspace.openTextDocument(uri);
+    await vscode.window.showTextDocument(doc);
+    await vscode.commands.executeCommand('dotenvManager.sortAll');
+    assert.strictEqual(doc.getText(), '# === Database ===\n# Connection settings\n\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n');
+
+    await applyEdit({ type: 'addVariable', group: 1, key: 'API', value: '1', index: 0 });
+    await vscode.commands.executeCommand('dotenvManager.sortAll');
+    assert.strictEqual(
+      doc.getText(),
+      '# === Database ===\n# Connection settings\n\nAPI=1\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n',
+    );
+    await vscode.commands.executeCommand('workbench.action.files.save');
+
+    await applyEdit({ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 1, toIndex: 2 });
+    await vscode.commands.executeCommand('dotenvManager.sortAll');
+    assert.ok(doc.getText().includes('\nAPI=1\n# Hostname\nDB_HOST'));
+    await vscode.commands.executeCommand('undo');
+    assert.ok(doc.getText().endsWith('DB_PORT=5432\nAPI=1\n'));
+  });
+
   test('an invalid intent leaves the document unchanged', async () => {
     const doc = await vscode.workspace.openTextDocument(uri);
     assert.strictEqual(await applyEdit({ type: 'addVariable', group: 1, key: '1BAD', value: '' }), false);

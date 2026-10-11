@@ -224,6 +224,22 @@ describe('editing groups', () => {
   });
 });
 
+describe('sorting', () => {
+  it('sorts one group from its card', () => {
+    $('[data-action="sort-group"]', group(1)).click();
+    expect(edits()).toEqual([{ type: 'sortGroup', group: 1 }]);
+  });
+
+  it('disables group sorting with fewer than two variables', () => {
+    expect($<HTMLButtonElement>('[data-action="sort-group"]', group(2)).disabled).toBe(true);
+  });
+
+  it('sorts all groups from the toolbar', () => {
+    $('[data-action="sort-all"]').click();
+    expect(edits()).toEqual([{ type: 'sortAll' }]);
+  });
+});
+
 describe('drag and drop', () => {
   function drag(el: Element, type: string, clientY = 1): void {
     const event = new Event(type, { bubbles: true, cancelable: true });

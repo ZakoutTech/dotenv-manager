@@ -43,9 +43,24 @@
         "command": "dotenvManager.openEditor",
         "title": "Open with Dotenv Manager",
         "category": "Dotenv Manager"
+      },
+      {
+        "command": "dotenvManager.sortAll",
+        "title": "Sort All Groups A→Z",
+        "category": "Dotenv Manager"
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "dotenvManager.openEditor",
+          "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/"
+        },
+        {
+          "command": "dotenvManager.sortAll",
+          "when": "resourceFilename =~ /(^\\.env(\\..*)?$)|(\\.env$)/ || activeCustomEditorId == 'dotenvManager.editor'"
+        }
+      ],
       "editor/title": [
         {
           "command": "dotenvManager.openEditor",

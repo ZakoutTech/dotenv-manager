@@ -149,6 +149,74 @@ describe('applyIntent', () => {
     });
   });
 
+  describe('sorting', () => {
+    const UNSORTED = [
+      '# === G ===',
+      '# group note',
+      '',
+      'zeta=1',
+      '# about Alpha',
+      'Alpha=2',
+      '',
+      '# free block',
+      '',
+      'beta=3',
+      'alpha=4',
+      '',
+      '# === H ===',
+      'B=1',
+      'A=2',
+      '',
+    ].join('\n');
+
+    it('sorts one group case-insensitively, stable, comments attached, layout kept', () => {
+      expect(edit(UNSORTED, { type: 'sortGroup', group: 1 })).toBe(
+        [
+          '# === G ===',
+          '# group note',
+          '',
+          '# about Alpha',
+          'Alpha=2',
+          'alpha=4',
+          '',
+          '# free block',
+          '',
+          'beta=3',
+          'zeta=1',
+          '',
+          '# === H ===',
+          'B=1',
+          'A=2',
+          '',
+        ].join('\n'),
+      );
+    });
+
+    it('sorts every group but keeps the group order', () => {
+      const out = edit(UNSORTED, { type: 'sortAll' });
+      expect(parse(out).groups.map((g) => g.name)).toEqual([null, 'G', 'H']);
+      expect(out.endsWith('# === H ===\nA=2\nB=1\n')).toBe(true);
+    });
+
+    it('keeps raw formatting of the moved lines', () => {
+      expect(edit('b = "x"  # keep\nexport a=1\n', { type: 'sortGroup', group: 0 })).toBe('export a=1\nb = "x"  # keep\n');
+    });
+
+    it('separates a commented variable sorted to the top from the group header', () => {
+      expect(edit('# === G ===\nb=1\n# about a\na=2\n', { type: 'sortGroup', group: 1 })).toBe(
+        '# === G ===\n\n# about a\na=2\nb=1\n',
+      );
+    });
+
+    it('is a no-op on an already sorted group', () => {
+      expect(edit(SAMPLE, { type: 'sortAll' })).toBe(SAMPLE);
+    });
+
+    it('rejects an unknown group', () => {
+      expect(() => edit(SAMPLE, { type: 'sortGroup', group: 7 })).toThrow(EditError);
+    });
+  });
+
   describe('groups', () => {
     it('adds a group at the end separated by a blank line', () => {
       expect(edit('A=1', { type: 'addGroup', name: 'Cache', comment: 'Redis' })).toBe('A=1\n\n# === Cache ===\n# Redis');

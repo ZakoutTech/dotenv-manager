@@ -31,7 +31,9 @@ export type EditIntent =
   | { type: 'renameGroup'; group: number; name: string }
   | { type: 'updateGroupComment'; group: number; comment: string }
   | { type: 'deleteGroup'; group: number; deleteVariables: boolean }
-  | { type: 'moveGroup'; group: number; toIndex: number };
+  | { type: 'moveGroup'; group: number; toIndex: number }
+  | { type: 'sortGroup'; group: number }
+  | { type: 'sortAll' };
 
 export interface ViewEntry {
   key: string;

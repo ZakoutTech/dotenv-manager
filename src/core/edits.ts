@@ -121,6 +121,23 @@ function ensureSeparatorBefore(doc: EnvDocument, index: number): void {
   }
 }
 
+const sortKey = (entry: EnvEntry): string => entry.key.toLowerCase();
+
+/**
+ * Sort a group's variables A→Z (case-insensitive, stable). Variables are permuted
+ * within the slots variables already occupy, so blank lines, free comment blocks
+ * and unknown lines keep their positions; each variable keeps its comment and raw text.
+ */
+function sortGroup(group: EnvGroup): void {
+  const slots = entryPositions(group);
+  const sorted = slots
+    .map((slot) => group.items[slot] as EnvEntry)
+    .sort((a, b) => (sortKey(a) < sortKey(b) ? -1 : sortKey(a) > sortKey(b) ? 1 : 0));
+  slots.forEach((slot, i) => {
+    group.items[slot] = sorted[i];
+  });
+}
+
 function newEntry(key: string, value: string, comment: string | undefined): EnvEntry {
   validateKey(key);
   return { type: 'entry', key, value, quote: '', exported: false, comment: toCommentLines(comment ?? '') };
@@ -226,6 +243,12 @@ export function applyIntent(source: EnvDocument, intent: EditIntent): EnvDocumen
       }
       break;
     }
+    case 'sortGroup':
+      sortGroup(getGroup(doc, intent.group));
+      break;
+    case 'sortAll':
+      doc.groups.forEach(sortGroup);
+      break;
   }
 
   doc.groups.forEach(fixAdjacency);
