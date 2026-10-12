@@ -18,5 +18,6 @@ Initial release.
 - Commented-out variables (`# KEY=value`): shown on demand with **Show commented (n)**, and switched with **Comment out** / **Uncomment** on each row.
 - **File** dropdown at the start of the toolbar: lists the detected .env files with their location and opens the chosen one in Dotenv Manager.
 - **Save** button at the start of the toolbar, enabled while the file has unsaved changes.
+- Table layout: names, values, badges, **Show** and **Export** sit in columns that line up across all groups, with a column header per group; narrow panels fall back to wrapping rows.
 - **Preview** toolbar checkbox: shows the highlighted .env text in a read-only pane to the right, following **Show values**.
 - Lossless round-trip: lines you don't edit are written back exactly as they were.

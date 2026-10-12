@@ -451,6 +451,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       type: 'checkbox',
       'data-action': 'toggle-export',
       'data-focus-id': `export-${id}`,
+      'aria-label': `Export ${entry.key}`,
       checked: entry.exported,
     });
     on(exportBox, 'change', () =>
@@ -463,6 +464,24 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       title: 'Drag to reorder, or Alt+Up / Alt+Down',
     });
 
+    const actions = h(
+      'span',
+      { class: 'actions' },
+      on(button('Comment', 'edit-comment', `comment-${id}`, { title: 'Edit comment' }), 'click', () =>
+        startEditing({ kind: 'comment', group: g, index: i }, { text: entry.comment }),
+      ),
+      on(
+        button(entry.disabled ? 'Uncomment' : 'Comment out', 'toggle-disabled', `disable-${id}`, {
+          title: entry.disabled ? `Uncomment ${entry.key} so dotenv loads it` : `Comment out ${entry.key} (# ${entry.key}=…)`,
+        }),
+        'click',
+        () => dispatch({ type: 'updateVariable', ref: { group: g, index: i }, changes: { disabled: !entry.disabled } }),
+      ),
+      on(button('Delete', 'delete-variable', `delete-${id}`, { class: 'danger', title: `Delete ${entry.key}` }), 'click', () =>
+        dispatch({ type: 'deleteVariable', ref: { group: g, index: i } }),
+      ),
+    );
+
     const li = h(
       'li',
       { class: entry.disabled ? 'row disabled' : 'row', 'data-row': id, draggable: editingRow ? 'false' : 'true' },
@@ -473,31 +492,17 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         handle,
         key,
         h('span', { class: 'eq', 'aria-hidden': 'true' }, '='),
-        value,
-        resolved,
-        reveal,
-        h('label', { class: 'export', title: 'Prefix with export' }, exportBox, 'export'),
-        entry.disabled ? h('span', { class: 'badge-disabled', title: 'Commented out: dotenv ignores this line' }, 'commented') : null,
-        !entry.disabled && duplicates.has(entry.key)
-          ? h('span', { class: 'badge-duplicate', title: `${entry.key} is defined more than once; the last one wins` }, 'duplicate')
-          : null,
+        h('span', { class: 'cell-value' }, value, resolved, actions),
         h(
           'span',
-          { class: 'actions' },
-          on(button('Comment', 'edit-comment', `comment-${id}`, { title: 'Edit comment' }), 'click', () =>
-            startEditing({ kind: 'comment', group: g, index: i }, { text: entry.comment }),
-          ),
-          on(
-            button(entry.disabled ? 'Uncomment' : 'Comment out', 'toggle-disabled', `disable-${id}`, {
-              title: entry.disabled ? `Uncomment ${entry.key} so dotenv loads it` : `Comment out ${entry.key} (# ${entry.key}=…)`,
-            }),
-            'click',
-            () => dispatch({ type: 'updateVariable', ref: { group: g, index: i }, changes: { disabled: !entry.disabled } }),
-          ),
-          on(button('Delete', 'delete-variable', `delete-${id}`, { class: 'danger', title: `Delete ${entry.key}` }), 'click', () =>
-            dispatch({ type: 'deleteVariable', ref: { group: g, index: i } }),
-          ),
+          { class: 'cell-status' },
+          entry.disabled ? h('span', { class: 'badge-disabled', title: 'Commented out: dotenv ignores this line' }, 'commented') : null,
+          !entry.disabled && duplicates.has(entry.key)
+            ? h('span', { class: 'badge-duplicate', title: `${entry.key} is defined more than once; the last one wins` }, 'duplicate')
+            : null,
         ),
+        reveal,
+        h('label', { class: 'export', title: `Prefix ${entry.key} with export` }, exportBox),
       ),
       warnings,
       renamePrompt,
@@ -677,7 +682,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       const rows = group.entries.flatMap((e, i) => (isShown(e) ? [renderRow(e, g, i, duplicates)] : []));
       body.push(
         rows.length > 0
-          ? h('ul', { class: 'rows', role: 'list' }, ...rows)
+          ? h('ul', { class: 'rows', role: 'list' }, tableHead(), ...rows)
           : h('p', { class: 'empty-hint' }, 'No variables in this group.'),
       );
       if (hidden > 0) {
@@ -821,6 +826,30 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     );
   }
 
+  /** Column header shown above each group's rows; it uses the same grid as `.row-main`. */
+  function tableHead(): HTMLElement {
+    return h(
+      'li',
+      { class: 'table-head', 'aria-hidden': 'true' },
+      h('span', {}),
+      h('span', {}, 'Name'),
+      h('span', {}),
+      h('span', {}, 'Value'),
+      h('span', {}),
+      h('span', {}),
+      h('span', {}, 'Export'),
+    );
+  }
+
+  /** Size the shared table columns from the shown rows, so every group lines up the same way. */
+  function setColumnWidths(doc: ViewDocument, duplicates: Set<string>): void {
+    const shown = doc.groups.flatMap((group) => group.entries.filter(isShown));
+    const longestKey = shown.reduce((n, e) => Math.max(n, e.key.length), 0);
+    const hasBadges = shown.some((e) => e.disabled || duplicates.has(e.key));
+    root.style.setProperty('--key-chars', String(longestKey));
+    root.style.setProperty('--status-col', hasBadges ? 'calc(8ch + 16px)' : '0px');
+  }
+
   function render(focusId?: string): void {
     rendering = true;
     const activeId = (document.activeElement as HTMLElement | null)?.dataset?.focusId;
@@ -907,6 +936,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     const doc = state.doc;
     if (doc) {
       const duplicates = duplicateKeys(doc);
+      setColumnWidths(doc, duplicates);
       doc.groups.forEach((group, g) => {
         const showUngrouped = group.entries.length > 0 || doc.groups.length === 1 || isEditing('newVariable', 0);
         if (group.name !== null || showUngrouped) {

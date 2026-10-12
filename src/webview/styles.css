@@ -194,17 +194,59 @@ textarea {
 .row:focus-within .actions {
   display: flex;
 }
-.row-main {
+/*
+ * Table layout: every row (and each group's column header) uses the same grid, so names,
+ * values, badges and toggles line up down the page and across groups. The name column is
+ * sized from the longest shown name (--key-chars, set by the webview).
+ */
+.row-main,
+.table-head {
+  --key-col: min(max(16ch, calc((var(--key-chars, 16) + 1) * 1ch + 10px)), 40%);
+  display: grid;
+  grid-template-columns: 18px var(--key-col) 1ch minmax(0, 1fr) var(--status-col, 0px) calc(4ch + 16px) calc(6ch + 10px);
+  align-items: center;
+  column-gap: 6px;
+  font-family: var(--vscode-editor-font-family);
+  font-size: var(--vscode-editor-font-size);
+}
+.table-head {
+  padding: 0 4px 2px 8px;
+  margin-bottom: 2px;
+  color: var(--muted);
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+/* Line the header text up with the text inside the key/value buttons. */
+.table-head > span {
+  padding: 0 5px;
+}
+.row-main .drag-handle {
+  padding: 2px 0;
+}
+.cell-value {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-family: var(--vscode-editor-font-family);
-  font-size: var(--vscode-editor-font-size);
+  min-width: 0;
+}
+.cell-value > .value {
+  max-width: 100%;
+}
+.cell-status {
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+  overflow: hidden;
+}
+.row-main > .export {
+  justify-self: start;
 }
 .key {
   font-family: inherit;
-  min-width: 16ch;
+  justify-self: start;
+  max-width: 100%;
+  overflow-wrap: anywhere;
   text-align: left;
   font-weight: 600;
   color: var(--vscode-symbolIcon-variableForeground, var(--vscode-foreground));
@@ -409,8 +451,8 @@ textarea {
 
 /* Keep values whole where possible; let the resolved preview take the remaining space. */
 .value {
-  flex: 0 0 auto;
-  max-width: 50%;
+  flex: 0 1 auto;
+  max-width: 100%;
   word-break: normal;
   overflow-wrap: anywhere;
 }
@@ -542,5 +584,24 @@ select {
   .text-preview {
     position: static;
     max-height: none;
+  }
+}
+
+/* Too narrow for table columns: fall back to wrapping rows without the column header. */
+.group {
+  container-type: inline-size;
+}
+@container (max-width: 440px) {
+  .row-main {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .row-main .cell-value {
+    flex: 1 1 100%;
+    padding-left: 24px;
+  }
+  .table-head {
+    display: none;
   }
 }

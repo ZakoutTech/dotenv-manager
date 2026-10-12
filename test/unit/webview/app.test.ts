@@ -597,3 +597,39 @@ describe('file dropdown', () => {
     expect(edits()).toEqual([]);
   });
 });
+
+describe('table layout', () => {
+  it('renders every row with the same cells, in column order', () => {
+    for (const r of [row(0, 0), row(1, 0), row(1, 1), row(2, 0)]) {
+      const cells = [...$('.row-main', r).children].map((c) => c.className || c.getAttribute('data-action'));
+      expect(cells).toEqual(['icon drag-handle', 'key', 'eq', 'cell-value', 'cell-status', 'icon', 'export']);
+    }
+  });
+
+  it('puts badges in the status column and actions inside the value cell', () => {
+    expect($('.cell-status .badge-duplicate', row(2, 0)).textContent).toBe('duplicate');
+    expect($('.cell-status', row(1, 0)).children).toHaveLength(0);
+    expect($('.cell-value .actions', row(1, 0))).toBeTruthy();
+  });
+
+  it('shows a column header above each group with rows', () => {
+    expect($$('.table-head')).toHaveLength(3);
+    expect($('.table-head', group(1)).textContent).toBe('NameValueExport');
+  });
+
+  it('sizes the name column from the longest shown name and reserves the status column only when needed', () => {
+    expect(root.style.getPropertyValue('--key-chars')).toBe('7');
+    expect(root.style.getPropertyValue('--status-col')).not.toBe('0px');
+    app.receive({
+      type: 'update',
+      version: 2,
+      doc: { groups: [{ name: null, comment: '', entries: [{ key: 'A_MUCH_LONGER_NAME', value: '', quote: '', exported: false, comment: '' }] }] },
+    });
+    expect(root.style.getPropertyValue('--key-chars')).toBe('18');
+    expect(root.style.getPropertyValue('--status-col')).toBe('0px');
+  });
+
+  it('labels the export checkbox with the variable name', () => {
+    expect($('[data-action="toggle-export"]', row(1, 1)).getAttribute('aria-label')).toBe('Export DB_PORT');
+  });
+});
