@@ -39,18 +39,12 @@ Node.js is installed by the workflows from `.nvmrc`.
 
 ### Repository
 
-1. Add the repository URL to `package.json`:
-
-   ```json
-   "repository": { "type": "git", "url": "https://github.com/<owner>/<repo>.git" },
-   ```
-
-2. **Settings → Actions → General → Workflow permissions:** tick **Allow GitHub Actions to create and approve pull requests** (for the Version Packages PR).
-3. **Settings → Environments:** create an environment named `marketplace` with these secrets, and add yourself as a required reviewer to approve every publish.
+1. **Settings → Actions → General → Workflow permissions:** tick **Allow GitHub Actions to create and approve pull requests** (for the Version Packages PR).
+2. **Settings → Environments:** create an environment named `marketplace` with these secrets, and add yourself as a required reviewer to approve every publish.
    - `VSCE_PAT`: an Azure DevOps personal access token with the **Marketplace → Manage** scope, for the `zakout` publisher ([guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token)).
    - `OVSX_PAT`: an [Open VSX](https://open-vsx.org/) access token. Before the first publish, create the namespace once: `npx ovsx create-namespace zakout -p <token>`.
-4. Optional but recommended: a repository secret `RELEASE_TOKEN`, a fine-grained personal access token (or GitHub App token) with read/write access to contents and pull requests. Pull requests opened with the default `GITHUB_TOKEN` do not start other workflows, so without it CI does not run on the Version Packages PR. (The release is still fully checked, because the Release workflow runs CI after it is merged.)
-5. Recommended branch protection for `main`: require pull requests and the **Lint, test and package**, **Conventional PR title** and **Changeset** checks.
+3. Optional but recommended: a repository secret `RELEASE_TOKEN`, a fine-grained personal access token (or GitHub App token) with read/write access to contents and pull requests. Pull requests opened with the default `GITHUB_TOKEN` do not start other workflows, so without it CI does not run on the Version Packages PR. (The release is still fully checked, because the Release workflow runs CI after it is merged.)
+4. Recommended branch protection for `main`: require pull requests and the **Lint, test and package**, **Conventional PR title** and **Changeset** checks.
 
 ### Fully automatic releases (optional)
 
