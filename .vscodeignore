@@ -10,7 +10,7 @@ node_modules/**
 **/*.ts
 .gitignore
 esbuild.mjs
-eslint.config.mjs
+.oxlintrc.json
 vitest.config.mts
 tsconfig*.json
 .vscode-test.mjs

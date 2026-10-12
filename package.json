@@ -255,7 +255,9 @@
     "build": "node esbuild.mjs",
     "watch": "node esbuild.mjs --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "lint": "eslint src test preview",
+    "lint": "oxlint --deny-warnings",
+    "format": "oxfmt",
+    "format:check": "oxfmt --check",
     "preview": "node scripts/preview.mjs",
     "install:cursor": "npm run package && node scripts/install-extension.mjs cursor",
     "install:code": "npm run package && node scripts/install-extension.mjs code",
@@ -267,20 +269,19 @@
     "package": "vsce package --allow-missing-repository --no-rewrite-relative-links"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^24.19.2",
-    "@types/vscode": "~1.100.0",
-    "@vitest/coverage-v8": "^5.0.3",
+    "@types/node": "^26.6.5",
+    "@types/vscode": "~1.140.0",
+    "@vitest/coverage-v8": "^5.0.4",
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.0.0",
     "esbuild": "^0.28.2",
-    "eslint": "^10.12.0",
-    "happy-dom": "^20.14.5",
-    "mocha": "^11.8.0",
-    "typescript": "~6.0.3",
-    "typescript-eslint": "^8.71.1",
-    "vitest": "^5.0.3"
+    "happy-dom": "^21.0.1",
+    "mocha": "^12.0.3",
+    "oxfmt": "^0.72.0",
+    "oxlint": "^1.87.0",
+    "typescript": "~7.0.2",
+    "vitest": "^5.0.4"
   }
 }

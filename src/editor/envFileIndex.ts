@@ -190,7 +190,7 @@ function applyChange(files: Map<string, EnvFile>, change: Change): boolean {
   }
   const prefix = `${change.uri}/`;
   let removed = false;
-  for (const key of [...files.keys()]) {
+  for (const key of files.keys()) {
     if (key === change.uri || key.startsWith(prefix)) {
       files.delete(key);
       removed = true;
