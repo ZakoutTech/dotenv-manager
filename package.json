@@ -2,7 +2,7 @@
   "name": "dotenv-manager",
   "displayName": "Dotenv Manager",
   "description": "Visual editor for .env files: groups, comments, drag-and-drop ordering, alphabetical sorting and ${VAR} references.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "zakout",
   "private": true,
   "license": "MIT",
