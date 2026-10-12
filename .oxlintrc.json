@@ -12,7 +12,12 @@
   "ignorePatterns": ["dist/**", "preview/dist/**", "out/**", ".vscode-test/**", "coverage/**"],
   "rules": {
     "eqeqeq": "error",
-    "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
     "no-var": "error",
     "prefer-const": "error",
     "prefer-rest-params": "error",
