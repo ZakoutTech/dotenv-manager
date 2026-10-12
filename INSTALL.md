@@ -3,7 +3,7 @@
 Dotenv Manager isn't on the VS Code Marketplace or Open VSX yet. You install it from a `.vsix` package that you build from this repository. The same `.vsix` works in **VS Code** and **Cursor**.
 
 - Extension ID: `zakout.dotenv-manager`
-- Needs VS Code **1.100** or newer (in Cursor, the VS Code version it is built on must be 1.100 or newer; see [If Cursor refuses to install it](#if-cursor-refuses-to-install-it))
+- Needs VS Code **1.128** or newer (in Cursor, the VS Code version it is built on must be 1.128 or newer; see [If Cursor refuses to install it](#if-cursor-refuses-to-install-it))
 
 ## 1. Build the `.vsix`
 
@@ -61,7 +61,7 @@ If `cursor` isn't found, open the Command Palette in Cursor and run **Shell Comm
 
 ### If Cursor refuses to install it
 
-An error like _"Unable to install extension … as it is not compatible with VS Code '1.x.y'"_ means your Cursor is built on a VS Code version older than 1.100. Check the version under **Cursor → About Cursor** (macOS) or **Help → About** (Windows/Linux); the line that says **VSCode Version** is the one that matters. Update Cursor to fix it.
+An error like _"Unable to install extension … as it is not compatible with VS Code '1.x.y'"_ means your Cursor is built on a VS Code version older than 1.128. Check the version under **Cursor → About Cursor** (macOS) or **Help → About** (Windows/Linux); the line that says **VSCode Version** is the one that matters. Update Cursor to fix it.
 
 ## 4. Check that it works
 
