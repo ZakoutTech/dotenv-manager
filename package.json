@@ -4,6 +4,7 @@
   "description": "Visual editor for .env files: groups, comments, drag-and-drop ordering, alphabetical sorting and ${VAR} references.",
   "version": "0.0.1",
   "publisher": "zakout",
+  "private": true,
   "license": "MIT",
   "icon": "images/icon.png",
   "engines": {
@@ -256,6 +257,9 @@
     "watch": "tsdown --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "oxlint --deny-warnings",
+    "changeset": "changeset",
+    "release:version": "changeset version && npm install --package-lock-only --ignore-scripts",
+    "release:tag": "changeset publish",
     "format": "oxfmt",
     "format:check": "oxfmt --check",
     "preview": "node scripts/preview.mjs",
@@ -269,6 +273,7 @@
     "package": "vsce package --allow-missing-repository --no-rewrite-relative-links"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.3",
     "@tsdown/css": "^0.23.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^26.6.5",
@@ -279,6 +284,7 @@
     "@vscode/vsce": "^4.0.0",
     "happy-dom": "^21.0.1",
     "mocha": "^12.0.3",
+    "ovsx": "^1.2.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
     "tsdown": "^0.23.1",
