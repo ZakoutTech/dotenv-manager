@@ -114,6 +114,22 @@ suite('Opening .env files', () => {
     assert.strictEqual(await waitForActiveViewType(VIEW_TYPE), VIEW_TYPE);
   });
 
+  test('removes associations that make Dotenv Manager the default, even when written back later', async () => {
+    const workbench = vscode.workspace.getConfiguration('workbench');
+    // What an old build (or Settings Sync) writes; *.md must survive.
+    await workbench.update(
+      'editorAssociations',
+      { '.env': VIEW_TYPE, '.env.local': VIEW_TYPE, '*.md': 'vscode.markdown.preview.editor' },
+      vscode.ConfigurationTarget.Global,
+    );
+    const cleaned = await waitFor(associations, (value) => !Object.values(value).includes(VIEW_TYPE));
+    assert.deepStrictEqual(cleaned, { '*.md': 'vscode.markdown.preview.editor' });
+    await workbench.update('editorAssociations', undefined, vscode.ConfigurationTarget.Global);
+
+    await vscode.commands.executeCommand('vscode.open', fixtureUri('sample.env'));
+    assert.ok(await waitFor(isTextTab, (text) => text), 'sample.env should open as text');
+  });
+
   test('"Open as Text" replaces the Dotenv Manager tab', async () => {
     await vscode.commands.executeCommand('vscode.openWith', fixtureUri('sample.env'), VIEW_TYPE);
     await waitForActiveViewType(VIEW_TYPE);

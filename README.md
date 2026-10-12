@@ -57,7 +57,7 @@ To see the raw text, click **Open as text** in the Dotenv Manager toolbar or the
 - **Excludes:** `dotenvManager.exclude` lists glob patterns that aren't searched. It defaults to the folders above. A pattern without `/` matches that name at any depth; `**`, `*`, `?`, `{a,b}` and `[abc]` are supported. To stop skipping `vendor`, remove it from the list.
 - Hide the status bar item with `dotenvManager.statusBar.enabled: false`.
 
-If an earlier version made Dotenv Manager the default editor, those `workbench.editorAssociations` entries are removed the first time this version starts.
+If an earlier version made Dotenv Manager the default editor, those `workbench.editorAssociations` entries are removed when this version starts, and again whenever something writes them back (for example an older build in another editor, or Settings Sync).
 
 | Action                             | How                                                                                                                                                                                                 |
 | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

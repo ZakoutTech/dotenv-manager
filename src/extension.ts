@@ -61,7 +61,7 @@ export function activate(context: vscode.ExtensionContext): DotenvManagerApi {
   registerMenuContext(context, index);
 
   registerDiagnostics(context);
-  void removeLegacyAssociations(context);
+  removeLegacyAssociations(context);
   registerStatusBar(context, index);
   const tree = registerEnvFileTree(context, index);
 
