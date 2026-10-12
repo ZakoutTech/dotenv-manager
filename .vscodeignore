@@ -9,9 +9,10 @@ node_modules/**
 **/*.map
 **/*.ts
 .gitignore
-esbuild.mjs
+.oxfmtrc.json
 .oxlintrc.json
 vitest.config.mts
+tsdown.config.mts
 tsconfig*.json
 .vscode-test.mjs
 images/icon.svg

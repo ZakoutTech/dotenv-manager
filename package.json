@@ -252,8 +252,8 @@
     }
   },
   "scripts": {
-    "build": "node esbuild.mjs",
-    "watch": "node esbuild.mjs --watch",
+    "build": "tsdown",
+    "watch": "tsdown --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "lint": "oxlint --deny-warnings",
     "format": "oxfmt",
@@ -265,10 +265,11 @@
     "test:coverage": "vitest run --coverage",
     "pretest:integration": "npm run build && tsc -p tsconfig.integration.json",
     "test:integration": "vscode-test",
-    "vscode:prepublish": "node esbuild.mjs --production",
+    "vscode:prepublish": "tsdown --minify",
     "package": "vsce package --allow-missing-repository --no-rewrite-relative-links"
   },
   "devDependencies": {
+    "@tsdown/css": "^0.23.1",
     "@types/mocha": "^10.0.10",
     "@types/node": "^26.6.5",
     "@types/vscode": "~1.140.0",
@@ -276,11 +277,11 @@
     "@vscode/test-cli": "^0.0.15",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^4.0.0",
-    "esbuild": "^0.28.2",
     "happy-dom": "^21.0.1",
     "mocha": "^12.0.3",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
+    "tsdown": "^0.23.1",
     "typescript": "~7.0.2",
     "vitest": "^5.0.4"
   }

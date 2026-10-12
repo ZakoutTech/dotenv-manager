@@ -26,7 +26,7 @@
     <script src="dist/main.js"></script>
     <script>
       // Live reload when `npm run preview` rebuilds.
-      new EventSource('/esbuild').addEventListener('change', () => location.reload());
+      new EventSource('/reload').addEventListener('change', () => location.reload());
     </script>
   </body>
 </html>
