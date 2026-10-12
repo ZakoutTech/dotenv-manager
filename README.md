@@ -20,7 +20,7 @@ A visual editor for `.env` files in VS Code. Organize variables into commented g
   - A **Dotenv Files** panel in the Explorer always lists them.
   - Both search all workspace folders at any depth and update as files are created, deleted or renamed. `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage` and `vendor` are skipped by default; change that with `dotenvManager.exclude`.
 - **Create .env files.** Use the selector, the panel, or right-click a folder in the Explorer. Paths like `apps/api/.env.local` work, the name must be one from `dotenvManager.envFiles`, and existing files are never overwritten.
-- **Commented-out variables.** Lines like `# API_KEY=old-value` are recognised as variables that are switched off. Tick **Show commented (n)** in the toolbar to see them (greyed out, marked *commented*), and use **Comment out** / **Uncomment** on any row to switch a variable off or on. dotenv ignores them, so they never count as definitions, duplicates or reference targets.
+- **Commented-out variables.** Lines like `# API_KEY=old-value` are recognised as variables that are switched off. Tick **Show commented (n)** in the toolbar to see them (greyed out, marked _commented_), and use **Comment out** / **Uncomment** on any row to switch a variable off or on. dotenv ignores them, so they never count as definitions, duplicates or reference targets.
 - **Text preview.** Tick **Preview** next to **Sort all A→Z** to split the editor: the GUI stays on the left and the file's text appears on the right, highlighted and updated with every change. It is read-only and hides values unless **Show values** is ticked; use **Open as text** to edit the text directly.
 - **Masked values.** Values are hidden until you click **Show** on a row or tick **Show values**.
 - **Safe editing.** Every action is a normal edit to the text document, so undo/redo, save and the unsaved-changes marker work as usual. You can keep the text editor open beside the GUI; both stay in sync.
@@ -59,18 +59,18 @@ To see the raw text, click **Open as text** in the Dotenv Manager toolbar or the
 
 If an earlier version made Dotenv Manager the default editor, those `workbench.editorAssociations` entries are removed the first time this version starts.
 
-| Action | How |
-|---|---|
-| Edit a key, value or comment | Click it. <kbd>Enter</kbd> saves, <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a line break, <kbd>Esc</kbd> cancels. |
-| Add a variable | **+ Variable** on a group card |
-| Add a group | **+ Group** in the toolbar |
-| Move a variable or group | Drag the ⠿ handle, or <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd> |
-| Sort | **Sort A→Z** on a group, **Sort all A→Z** in the toolbar |
-| Switch to another .env file | The **File** dropdown at the start of the toolbar lists every detected file as `<workspace folder>/<path>` (hover an entry for its full path). Picking one opens it in Dotenv Manager in a new tab. |
-| Save the file | **Save** at the left of the toolbar (enabled when there are unsaved changes), or Ctrl/Cmd+S |
-| See the file text beside the GUI | Tick **Preview** in the toolbar |
-| Comment out / uncomment a variable | **Comment out** or **Uncomment** on the row. Tick **Show commented (n)** to see commented-out variables. |
-| Delete a group | **Delete** on the group card. You can keep its variables; they move to the group above. |
+| Action                             | How                                                                                                                                                                                                 |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Edit a key, value or comment       | Click it. <kbd>Enter</kbd> saves, <kbd>Shift</kbd>+<kbd>Enter</kbd> adds a line break, <kbd>Esc</kbd> cancels.                                                                                      |
+| Add a variable                     | **+ Variable** on a group card                                                                                                                                                                      |
+| Add a group                        | **+ Group** in the toolbar                                                                                                                                                                          |
+| Move a variable or group           | Drag the ⠿ handle, or <kbd>Alt</kbd>+<kbd>↑</kbd> / <kbd>Alt</kbd>+<kbd>↓</kbd>                                                                                                                     |
+| Sort                               | **Sort A→Z** on a group, **Sort all A→Z** in the toolbar                                                                                                                                            |
+| Switch to another .env file        | The **File** dropdown at the start of the toolbar lists every detected file as `<workspace folder>/<path>` (hover an entry for its full path). Picking one opens it in Dotenv Manager in a new tab. |
+| Save the file                      | **Save** at the left of the toolbar (enabled when there are unsaved changes), or Ctrl/Cmd+S                                                                                                         |
+| See the file text beside the GUI   | Tick **Preview** in the toolbar                                                                                                                                                                     |
+| Comment out / uncomment a variable | **Comment out** or **Uncomment** on the row. Tick **Show commented (n)** to see commented-out variables.                                                                                            |
+| Delete a group                     | **Delete** on the group card. You can keep its variables; they move to the group above.                                                                                                             |
 
 ## File format
 
@@ -96,22 +96,22 @@ When the GUI moves or sorts variables, it inserts a blank line where needed so a
 
 ## Settings
 
-| Setting | Default | Description |
-|---|---|---|
-| `dotenvManager.envFiles` | `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.example` | File names Dotenv Manager detects and opens; nothing else is touched |
-| `dotenvManager.exclude` | `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage`, `vendor` (as `**/…`) | Glob patterns not searched for `.env` files |
-| `dotenvManager.statusBar.enabled` | `true` | Show **Dotenv Manager (n)** in the status bar |
+| Setting                           | Default                                                                                   | Description                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `dotenvManager.envFiles`          | `.env`, `.env.local`, `.env.development`, `.env.production`, `.env.test`, `.env.example`  | File names Dotenv Manager detects and opens; nothing else is touched |
+| `dotenvManager.exclude`           | `node_modules`, `.git`, `dist`, `out`, `build`, `.next`, `coverage`, `vendor` (as `**/…`) | Glob patterns not searched for `.env` files                          |
+| `dotenvManager.statusBar.enabled` | `true`                                                                                    | Show **Dotenv Manager (n)** in the status bar                        |
 
 ## Commands
 
-| Command | Description |
-|---|---|
-| `Dotenv Manager: Open with Dotenv Manager` | Open the current `.env` file in the visual editor |
-| `Dotenv Manager: Open as Text` | Show the current `.env` file in the text editor |
-| `Dotenv Manager: Select .env File` | Pick one of the workspace's `.env` files to open |
-| `Dotenv Manager: Create .env File…` | Create a new `.env` file in a workspace folder and open it |
-| `Dotenv Manager: Refresh .env Files` | Search the workspace for `.env` files again |
-| `Dotenv Manager: Sort All Groups A→Z` | Sort the variables of every group. Works from the text editor too. |
+| Command                                    | Description                                                        |
+| ------------------------------------------ | ------------------------------------------------------------------ |
+| `Dotenv Manager: Open with Dotenv Manager` | Open the current `.env` file in the visual editor                  |
+| `Dotenv Manager: Open as Text`             | Show the current `.env` file in the text editor                    |
+| `Dotenv Manager: Select .env File`         | Pick one of the workspace's `.env` files to open                   |
+| `Dotenv Manager: Create .env File…`        | Create a new `.env` file in a workspace folder and open it         |
+| `Dotenv Manager: Refresh .env Files`       | Search the workspace for `.env` files again                        |
+| `Dotenv Manager: Sort All Groups A→Z`      | Sort the variables of every group. Works from the text editor too. |
 
 ## Notes
 

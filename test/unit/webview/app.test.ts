@@ -413,7 +413,6 @@ describe('opening files', () => {
   });
 });
 
-
 describe('sync', () => {
   it('sends edits with the latest document version', () => {
     app.receive({ type: 'update', version: 7, doc: DOC });
@@ -623,7 +622,9 @@ describe('table layout', () => {
     app.receive({
       type: 'update',
       version: 2,
-      doc: { groups: [{ name: null, comment: '', entries: [{ key: 'A_MUCH_LONGER_NAME', value: '', quote: '', exported: false, comment: '' }] }] },
+      doc: {
+        groups: [{ name: null, comment: '', entries: [{ key: 'A_MUCH_LONGER_NAME', value: '', quote: '', exported: false, comment: '' }] }],
+      },
     });
     expect(root.style.getPropertyValue('--key-chars')).toBe('18');
     expect(root.style.getPropertyValue('--status-col')).toBe('0px');

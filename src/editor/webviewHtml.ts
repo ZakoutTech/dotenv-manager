@@ -21,11 +21,7 @@ export function createNonce(): string {
 }
 
 function escapeAttr(value: string): string {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
+  return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** JSON that is safe inside a <script> element (cannot close the tag or start a comment). */
@@ -43,11 +39,7 @@ export function getWebviewHtml({ nonce, scriptUri, styleUri, cspSource, initialM
     ? `<script type="application/json" id="initial-state">${scriptSafeJson(initialMessages)}</script>\n  `
     : '';
   const n = escapeAttr(nonce);
-  const csp = [
-    "default-src 'none'",
-    `style-src ${escapeAttr(cspSource)} 'unsafe-inline'`,
-    `script-src 'nonce-${n}'`,
-  ].join('; ');
+  const csp = ["default-src 'none'", `style-src ${escapeAttr(cspSource)} 'unsafe-inline'`, `script-src 'nonce-${n}'`].join('; ');
 
   return `<!DOCTYPE html>
 <html lang="en">

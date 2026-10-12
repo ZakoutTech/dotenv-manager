@@ -21,7 +21,7 @@ async function undo(doc: vscode.TextDocument): Promise<void> {
   await vscode.commands.executeCommand('undo');
 }
 
-const ORIGINAL ='# === Database ===\n# Connection settings\n\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n';
+const ORIGINAL = '# === Database ===\n# Connection settings\n\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n';
 
 suite('Dotenv Manager editing', () => {
   let dir: string;
@@ -78,10 +78,7 @@ suite('Dotenv Manager editing', () => {
 
     await applyEdit({ type: 'addVariable', group: 1, key: 'API', value: '1', index: 0 });
     await vscode.commands.executeCommand('dotenvManager.sortAll');
-    assert.strictEqual(
-      doc.getText(),
-      '# === Database ===\n# Connection settings\n\nAPI=1\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n',
-    );
+    assert.strictEqual(doc.getText(), '# === Database ===\n# Connection settings\n\nAPI=1\n# Hostname\nDB_HOST=localhost\nDB_PORT=5432\n');
     await vscode.commands.executeCommand('workbench.action.files.save');
 
     await applyEdit({ type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 1, toIndex: 2 });
@@ -97,14 +94,23 @@ suite('Dotenv Manager editing', () => {
     await vscode.window.showTextDocument(doc);
     await applyEdit({ type: 'addVariable', group: 1, key: 'DB_URL', value: 'pg://${DB_HOST}:${DB_PROT}' });
 
-    const diagnostics = await waitFor(() => vscode.languages.getDiagnostics(uri), (d) => d.length > 0);
+    const diagnostics = await waitFor(
+      () => vscode.languages.getDiagnostics(uri),
+      (d) => d.length > 0,
+    );
     assert.strictEqual(diagnostics.length, 1);
     assert.strictEqual(diagnostics[0].message, 'Undefined variable DB_PROT');
     assert.strictEqual(diagnostics[0].range.start.line, 6);
     assert.strictEqual(doc.getText(diagnostics[0].range), '${DB_PROT}');
 
     await applyEdit({ type: 'updateVariable', ref: { group: 1, index: 2 }, changes: { value: 'pg://${DB_HOST}:${DB_PORT}' } });
-    assert.deepStrictEqual(await waitFor(() => vscode.languages.getDiagnostics(uri), (d) => d.length === 0), []);
+    assert.deepStrictEqual(
+      await waitFor(
+        () => vscode.languages.getDiagnostics(uri),
+        (d) => d.length === 0,
+      ),
+      [],
+    );
   });
 
   test('renaming with reference update is one undo step', async () => {

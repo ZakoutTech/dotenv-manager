@@ -31,16 +31,10 @@ export function minimalReplace(oldText: string, newText: string): TextReplacemen
   }
 
   let suffix = 0;
-  while (
-    suffix < max - prefix &&
-    oldText[oldText.length - 1 - suffix] === newText[newText.length - 1 - suffix]
-  ) {
+  while (suffix < max - prefix && oldText[oldText.length - 1 - suffix] === newText[newText.length - 1 - suffix]) {
     suffix++;
   }
-  while (
-    suffix > 0 &&
-    (splitsPair(oldText, oldText.length - suffix) || splitsPair(newText, newText.length - suffix))
-  ) {
+  while (suffix > 0 && (splitsPair(oldText, oldText.length - suffix) || splitsPair(newText, newText.length - suffix))) {
     suffix--;
   }
 

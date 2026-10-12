@@ -1,19 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import {
-  createEnvFileMatcher,
-  DEFAULT_ENV_FILES,
-  envFilePatterns,
-  envFilesInclude,
-  literalEnvFileNames,
-} from '../../src/shared/envFiles';
+import { createEnvFileMatcher, DEFAULT_ENV_FILES, envFilePatterns, envFilesInclude, literalEnvFileNames } from '../../src/shared/envFiles';
 
 describe('createEnvFileMatcher', () => {
   const matches = createEnvFileMatcher(DEFAULT_ENV_FILES);
 
-  it.each(['.env', '.env.local', '.env.development', '.env.production', '.env.test', '.env.example'])(
-    'accepts the default %s',
-    (name) => expect(matches(name)).toBe(true),
+  it.each(['.env', '.env.local', '.env.development', '.env.production', '.env.test', '.env.example'])('accepts the default %s', (name) =>
+    expect(matches(name)).toBe(true),
   );
 
   it.each(['.env.ts', '.env.d.ts', '.env.json', '.env.staging', 'staging.env', '.envrc', 'env', '.env.local.bak'])(

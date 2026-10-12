@@ -8,8 +8,7 @@ import { serialize } from '../../src/core/serialize';
 import { toViewDocument } from '../../src/core/viewModel';
 import { computeProblems } from '../../src/core/diagnostics';
 
-const entries = (text: string): EnvEntry[] =>
-  parse(text).groups.flatMap((g) => g.items.filter((i): i is EnvEntry => i.type === 'entry'));
+const entries = (text: string): EnvEntry[] => parse(text).groups.flatMap((g) => g.items.filter((i): i is EnvEntry => i.type === 'entry'));
 
 describe('commented-out variables', () => {
   const SOURCE = [

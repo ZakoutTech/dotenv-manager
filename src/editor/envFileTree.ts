@@ -4,8 +4,7 @@ import type { EnvFileIndex } from './envFileIndex';
 
 export type EnvTreeNode = { kind: 'folder'; name: string; index: number } | ({ kind: 'file' } & EnvFile);
 
-const dirOf = (relativePath: string): string =>
-  relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/')) : '';
+const dirOf = (relativePath: string): string => (relativePath.includes('/') ? relativePath.slice(0, relativePath.lastIndexOf('/')) : '');
 
 /** "Dotenv Files" view: the detected files, grouped by workspace folder in multi-root workspaces. */
 export class EnvFileTreeProvider implements vscode.TreeDataProvider<EnvTreeNode>, vscode.Disposable {
@@ -29,9 +28,7 @@ export class EnvFileTreeProvider implements vscode.TreeDataProvider<EnvTreeNode>
       }
       return files.map((f) => ({ kind: 'file', ...f }));
     }
-    return node.kind === 'folder'
-      ? files.filter((f) => f.folderIndex === node.index).map((f) => ({ kind: 'file', ...f }))
-      : [];
+    return node.kind === 'folder' ? files.filter((f) => f.folderIndex === node.index).map((f) => ({ kind: 'file', ...f })) : [];
   }
 
   getTreeItem(node: EnvTreeNode): vscode.TreeItem {

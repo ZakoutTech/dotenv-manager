@@ -1,12 +1,4 @@
-import type {
-  EditIntent,
-  FileChoice,
-  FromWebviewMessage,
-  ToWebviewMessage,
-  ViewDocument,
-  ViewEntry,
-  ViewGroup,
-} from '../shared/protocol';
+import type { EditIntent, FileChoice, FromWebviewMessage, ToWebviewMessage, ViewDocument, ViewEntry, ViewGroup } from '../shared/protocol';
 import { groupNameError, keyError } from '../shared/validation';
 import { groupDrop, keyboardGroupMove, variableDrop } from './dnd';
 import type { VariableMove, VariablePosition } from './dnd';
@@ -86,7 +78,15 @@ export interface App {
 
 export function createApp(root: HTMLElement, post: (message: FromWebviewMessage) => void): App {
   const queue = new EditQueue(post);
-  const state: State = { collapsed: new Set(), revealAll: false, revealed: new Set(), showDisabled: false, showPreview: false, dirty: false, draft: {} };
+  const state: State = {
+    collapsed: new Set(),
+    revealAll: false,
+    revealed: new Set(),
+    showDisabled: false,
+    showPreview: false,
+    dirty: false,
+    draft: {},
+  };
   let rendering = false;
 
   const dispatch = (intent: EditIntent): void => queue.submit(intent);
@@ -138,8 +138,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
   const isShown = (entry: ViewEntry): boolean => state.showDisabled || !entry.disabled;
 
   /** Model indices of the rows shown in group `g` (hidden commented-out variables are skipped). */
-  const visibleIndices = (g: number): number[] =>
-    groupAt(g)?.entries.flatMap((e, i) => (isShown(e) ? [i] : [])) ?? [];
+  const visibleIndices = (g: number): number[] => groupAt(g)?.entries.flatMap((e, i) => (isShown(e) ? [i] : [])) ?? [];
 
   /** Alt+Up/Down: swap with the neighbouring *shown* row, or move to the end/start of the adjacent group. */
   function keyboardMove(source: VariablePosition, direction: 'up' | 'down'): VariableMove | null {
@@ -362,8 +361,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
   function renderRow(entry: ViewEntry, g: number, i: number, duplicates: Set<string>): HTMLElement {
     const id = rowId(g, i);
     const revealed = state.revealAll || state.revealed.has(id);
-    const editingRow =
-      isEditing('key', g, i) || isEditing('value', g, i) || isEditing('comment', g, i) || isEditing('renameRefs', g, i);
+    const editingRow = isEditing('key', g, i) || isEditing('value', g, i) || isEditing('comment', g, i) || isEditing('renameRefs', g, i);
 
     let comment: Child = null;
     if (isEditing('comment', g, i)) {
@@ -401,13 +399,11 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         ? h(
             'span',
             { class: 'resolved', title: revealed ? `Resolves to: ${entry.resolved ?? ''}` : 'Resolved value (hidden)' },
-            `→\u00a0${revealed ? entry.resolved ?? '' : MASK}`,
+            `→\u00a0${revealed ? (entry.resolved ?? '') : MASK}`,
           )
         : null;
 
-    const warnings = entry.warnings?.length
-      ? h('div', { class: 'warning', role: 'note' }, `⚠ ${entry.warnings.join('; ')}`)
-      : null;
+    const warnings = entry.warnings?.length ? h('div', { class: 'warning', role: 'note' }, `⚠ ${entry.warnings.join('; ')}`) : null;
 
     let renamePrompt: Child = null;
     if (isEditing('renameRefs', g, i)) {
@@ -421,8 +417,10 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         'div',
         { class: 'confirm', role: 'alert' },
         h('span', {}, `${count} variable${count === 1 ? '' : 's'} reference${count === 1 ? 's' : ''} ${entry.key}. Rename to ${newKey}:`),
-        on(button('Rename and update references', 'rename-update', `rename-update-${id}`, { class: 'primary', 'data-autofocus': true }), 'click', () =>
-          rename(true),
+        on(
+          button('Rename and update references', 'rename-update', `rename-update-${id}`, { class: 'primary', 'data-autofocus': true }),
+          'click',
+          () => rename(true),
         ),
         on(button('Rename only', 'rename-only', `rename-only-${id}`), 'click', () => rename(false)),
         on(button('Cancel', 'cancel', `rename-cancel-${id}`), 'click', stopEditing),
@@ -657,10 +655,15 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
         { class: 'confirm', role: 'alert' },
         h('span', {}, `Delete group “${label}”?`),
         on(
-          button(count > 0 ? `Delete group and ${count} variable${count === 1 ? '' : 's'}` : 'Delete group', 'confirm-delete-group', `confirm-delete-${g}`, {
-            class: 'danger',
-            'data-autofocus': true,
-          }),
+          button(
+            count > 0 ? `Delete group and ${count} variable${count === 1 ? '' : 's'}` : 'Delete group',
+            'confirm-delete-group',
+            `confirm-delete-${g}`,
+            {
+              class: 'danger',
+              'data-autofocus': true,
+            },
+          ),
           'click',
           () => {
             dispatch({ type: 'deleteGroup', group: g, deleteVariables: true });
@@ -855,7 +858,12 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     const activeId = (document.activeElement as HTMLElement | null)?.dataset?.focusId;
 
     const children: Child[] = [];
-    const revealAll = h('input', { type: 'checkbox', 'data-action': 'reveal-all', 'data-focus-id': 'reveal-all', checked: state.revealAll });
+    const revealAll = h('input', {
+      type: 'checkbox',
+      'data-action': 'reveal-all',
+      'data-focus-id': 'reveal-all',
+      checked: state.revealAll,
+    });
     on(revealAll, 'change', () => {
       state.revealAll = revealAll.checked;
       render();
@@ -872,7 +880,12 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
       state.showDisabled = showDisabled.checked;
       render();
     });
-    const showPreview = h('input', { type: 'checkbox', 'data-action': 'show-preview', 'data-focus-id': 'show-preview', checked: state.showPreview });
+    const showPreview = h('input', {
+      type: 'checkbox',
+      'data-action': 'show-preview',
+      'data-focus-id': 'show-preview',
+      checked: state.showPreview,
+    });
     on(showPreview, 'change', () => {
       state.showPreview = showPreview.checked;
       render();
@@ -948,9 +961,7 @@ export function createApp(root: HTMLElement, post: (message: FromWebviewMessage)
     const [toolbar, ...content] = children.filter((c): c is Node | string => !!c);
     root.replaceChildren(
       toolbar,
-      ...(state.showPreview
-        ? [h('div', { class: 'split' }, h('div', { class: 'split-main' }, ...content), renderTextPreview())]
-        : content),
+      ...(state.showPreview ? [h('div', { class: 'split' }, h('div', { class: 'split-main' }, ...content), renderTextPreview())] : content),
     );
 
     const wanted = focusId ?? activeId;

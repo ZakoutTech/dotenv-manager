@@ -22,9 +22,7 @@ export function withoutDotenvAssociations(
   }
   const written = new Set([...patterns, ...LEGACY_PATTERNS]);
   const next = Object.fromEntries(
-    Object.entries(current).filter(
-      ([pattern, editor]) => editor !== viewType && !(editor === TEXT_EDITOR && written.has(pattern)),
-    ),
+    Object.entries(current).filter(([pattern, editor]) => editor !== viewType && !(editor === TEXT_EDITOR && written.has(pattern))),
   );
   return Object.keys(next).length === Object.keys(current).length ? undefined : next;
 }

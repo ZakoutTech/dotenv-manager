@@ -89,9 +89,7 @@ describe('applyIntent', () => {
     it('updates key, quote, export flag and inline comment', () => {
       const changes = { key: 'B', quote: "'" as const, exported: true, inlineComment: 'hi' };
       expect(edit('A=1\n', { type: 'updateVariable', ref: { group: 0, index: 0 }, changes })).toBe("export B='1' # hi\n");
-      expect(
-        edit('A=1 # x\n', { type: 'updateVariable', ref: { group: 0, index: 0 }, changes: { inlineComment: null } }),
-      ).toBe('A=1\n');
+      expect(edit('A=1 # x\n', { type: 'updateVariable', ref: { group: 0, index: 0 }, changes: { inlineComment: null } })).toBe('A=1\n');
     });
 
     it('rejects an unknown variable', () => {
@@ -121,10 +119,7 @@ describe('applyIntent', () => {
     it('moves to another group, placing it under the target header', () => {
       const out = edit(SAMPLE, { type: 'moveVariable', ref: { group: 2, index: 0 }, toGroup: 1, toIndex: 0 });
       expect(out).toBe(
-        SAMPLE.replace('# Hostname\n', 'API_KEY="abc 123"\n# Hostname\n').replace(
-          '# === API ===\nAPI_KEY="abc 123"\n',
-          '# === API ===\n',
-        ),
+        SAMPLE.replace('# Hostname\n', 'API_KEY="abc 123"\n# Hostname\n').replace('# === API ===\nAPI_KEY="abc 123"\n', '# === API ===\n'),
       );
     });
 
@@ -143,9 +138,7 @@ describe('applyIntent', () => {
     });
 
     it('rejects an out-of-range target index', () => {
-      expect(() => edit(SAMPLE, { type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 2, toIndex: 5 })).toThrow(
-        EditError,
-      );
+      expect(() => edit(SAMPLE, { type: 'moveVariable', ref: { group: 1, index: 0 }, toGroup: 2, toIndex: 5 })).toThrow(EditError);
     });
   });
 
@@ -165,9 +158,9 @@ describe('applyIntent', () => {
     });
 
     it('rejects an invalid new key', () => {
-      expect(() =>
-        edit(REFS, { type: 'renameVariable', ref: { group: 0, index: 0 }, key: '9', updateReferences: true }),
-      ).toThrow(EditError);
+      expect(() => edit(REFS, { type: 'renameVariable', ref: { group: 0, index: 0 }, key: '9', updateReferences: true })).toThrow(
+        EditError,
+      );
     });
   });
 
@@ -225,9 +218,7 @@ describe('applyIntent', () => {
     });
 
     it('separates a commented variable sorted to the top from the group header', () => {
-      expect(edit('# === G ===\nb=1\n# about a\na=2\n', { type: 'sortGroup', group: 1 })).toBe(
-        '# === G ===\n\n# about a\na=2\nb=1\n',
-      );
+      expect(edit('# === G ===\nb=1\n# about a\na=2\n', { type: 'sortGroup', group: 1 })).toBe('# === G ===\n\n# about a\na=2\nb=1\n');
     });
 
     it('is a no-op on an already sorted group', () => {
@@ -269,9 +260,7 @@ describe('applyIntent', () => {
       expect(edit(SAMPLE, { type: 'updateGroupComment', group: 1, comment: 'Primary DB\nPostgres 16' })).toBe(
         SAMPLE.replace('# Connection settings', '# Primary DB\n# Postgres 16'),
       );
-      expect(edit(SAMPLE, { type: 'updateGroupComment', group: 1, comment: '' })).toBe(
-        SAMPLE.replace('# Connection settings\n', ''),
-      );
+      expect(edit(SAMPLE, { type: 'updateGroupComment', group: 1, comment: '' })).toBe(SAMPLE.replace('# Connection settings\n', ''));
     });
 
     it('deletes a group with its variables', () => {

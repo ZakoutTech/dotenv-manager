@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parse } from '../../src/core/parse';
 import { findReferences, resolve, resolveEntries } from '../../src/core/resolve';
 
-const resolved = (text: string): Record<string, string> =>
-  Object.fromEntries([...resolve(parse(text))].map(([key, r]) => [key, r.value]));
+const resolved = (text: string): Record<string, string> => Object.fromEntries([...resolve(parse(text))].map(([key, r]) => [key, r.value]));
 
 describe('resolve', () => {
   it('expands ${VAR} references (the plan example)', () => {

@@ -88,12 +88,7 @@ describe('pickerEntries', () => {
 
   it('adds a separator per workspace folder in multi-root workspaces', () => {
     const entries = pickerEntries([file('.env'), file('.env', 'other', 1)], undefined, true);
-    expect(entries.map((e) => (e.kind === 'separator' ? `-- ${e.label}` : e.label))).toEqual([
-      '-- app',
-      '.env',
-      '-- other',
-      '.env',
-    ]);
+    expect(entries.map((e) => (e.kind === 'separator' ? `-- ${e.label}` : e.label))).toEqual(['-- app', '.env', '-- other', '.env']);
   });
 });
 

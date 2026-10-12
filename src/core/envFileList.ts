@@ -29,9 +29,7 @@ export function sortEnvFiles(files: EnvFile[]): EnvFile[] {
 }
 
 export function statusBarText(count: number | undefined, truncated = false): string {
-  return count === undefined
-    ? '$(symbol-variable) Dotenv Manager'
-    : `$(symbol-variable) Dotenv Manager (${count}${truncated ? '+' : ''})`;
+  return count === undefined ? '$(symbol-variable) Dotenv Manager' : `$(symbol-variable) Dotenv Manager (${count}${truncated ? '+' : ''})`;
 }
 
 /** File and folder names are user-controlled; escape them so they render as plain text. */

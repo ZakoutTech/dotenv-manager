@@ -56,9 +56,7 @@ export async function selectEnvFile(index: EnvFileIndex): Promise<void> {
           : {
               label: `$(${entry.current ? 'pass-filled' : 'file'}) ${entry.label}`,
               description: entry.description,
-              detail: counts?.has(entry.uri)
-                ? `${counts.get(entry.uri)} variable${counts.get(entry.uri) === 1 ? '' : 's'}`
-                : undefined,
+              detail: counts?.has(entry.uri) ? `${counts.get(entry.uri)} variable${counts.get(entry.uri) === 1 ? '' : 's'}` : undefined,
               uri: entry.uri,
               buttons: [OPEN_AS_TEXT, OPEN_VISUAL],
             },

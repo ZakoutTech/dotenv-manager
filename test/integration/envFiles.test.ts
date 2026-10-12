@@ -37,12 +37,18 @@ suite('Workspace .env files', () => {
     const file = path.join(dir, '.env.test');
     try {
       fs.writeFileSync(file, 'A=1\n');
-      const added = await waitFor(() => relativePaths(a), (p) => p.includes('services/worker/.env.test'));
+      const added = await waitFor(
+        () => relativePaths(a),
+        (p) => p.includes('services/worker/.env.test'),
+      );
       assert.ok(added.includes('services/worker/.env.test'), `got ${added.join(', ')}`);
     } finally {
       fs.rmSync(path.join(root(), 'services'), { recursive: true, force: true });
     }
-    const removed = await waitFor(() => relativePaths(a), (p) => !p.includes('services/worker/.env.test'));
+    const removed = await waitFor(
+      () => relativePaths(a),
+      (p) => !p.includes('services/worker/.env.test'),
+    );
     assert.deepStrictEqual(removed, ['sample.env', 'apps/api/.env.local']);
   });
 
@@ -53,7 +59,10 @@ suite('Workspace .env files', () => {
     fs.mkdirSync(from, { recursive: true });
     try {
       fs.writeFileSync(path.join(from, '.env'), 'A=1\n');
-      await waitFor(() => relativePaths(a), (p) => p.includes('svc-old/.env'));
+      await waitFor(
+        () => relativePaths(a),
+        (p) => p.includes('svc-old/.env'),
+      );
       fs.renameSync(from, to);
       const after = await waitFor(
         () => relativePaths(a),
@@ -64,7 +73,10 @@ suite('Workspace .env files', () => {
       fs.rmSync(from, { recursive: true, force: true });
       fs.rmSync(to, { recursive: true, force: true });
     }
-    await waitFor(() => relativePaths(a), (p) => p.length === 2);
+    await waitFor(
+      () => relativePaths(a),
+      (p) => p.length === 2,
+    );
   });
 
   test('the Dotenv Files view lists the files with their folder', async () => {
@@ -115,16 +127,20 @@ suite('Workspace .env files', () => {
       assert.ok(created && fs.existsSync(created.fsPath));
       assert.strictEqual(fs.readFileSync(created.fsPath, 'utf8'), '');
       const input = vscode.window.tabGroups.activeTabGroup.activeTab?.input;
-      assert.ok(
-        (input instanceof vscode.TabInputCustom || input instanceof vscode.TabInputText) && input.uri.fsPath === created.fsPath,
+      assert.ok((input instanceof vscode.TabInputCustom || input instanceof vscode.TabInputText) && input.uri.fsPath === created.fsPath);
+      const listed = await waitFor(
+        () => relativePaths(a),
+        (p) => p.includes('new-app/config/.env.local'),
       );
-      const listed = await waitFor(() => relativePaths(a), (p) => p.includes('new-app/config/.env.local'));
       assert.ok(listed.includes('new-app/config/.env.local'), `got ${listed.join(', ')}`);
     } finally {
       await vscode.commands.executeCommand('workbench.action.closeAllEditors');
       fs.rmSync(path.join(root(), 'new-app'), { recursive: true, force: true });
     }
-    await waitFor(() => relativePaths(a), (p) => p.length === 2);
+    await waitFor(
+      () => relativePaths(a),
+      (p) => p.length === 2,
+    );
   });
 
   test('never overwrites an existing file and rejects invalid names', async () => {
@@ -152,7 +168,10 @@ suite('Workspace .env files', () => {
       await config.update('exclude', undefined, vscode.ConfigurationTarget.Global);
     }
     assert.deepStrictEqual(
-      await waitFor(() => relativePaths(a), (p) => p.join() === ['sample.env', 'apps/api/.env.local'].join()),
+      await waitFor(
+        () => relativePaths(a),
+        (p) => p.join() === ['sample.env', 'apps/api/.env.local'].join(),
+      ),
       ['sample.env', 'apps/api/.env.local'],
     );
   });
@@ -168,7 +187,10 @@ suite('Workspace .env files', () => {
       assert.deepStrictEqual(relativePaths(a), ['sample.env', 'apps/api/.env.local']);
       await config.update('envFiles', ['.env.local'], vscode.ConfigurationTarget.Workspace);
       assert.deepStrictEqual(
-        await waitFor(() => relativePaths(a), (p) => p.join() === 'apps/api/.env.local'),
+        await waitFor(
+          () => relativePaths(a),
+          (p) => p.join() === 'apps/api/.env.local',
+        ),
         ['apps/api/.env.local'],
       );
     } finally {
@@ -176,7 +198,10 @@ suite('Workspace .env files', () => {
       await config.update('envFiles', listed, vscode.ConfigurationTarget.Workspace);
     }
     assert.deepStrictEqual(
-      await waitFor(() => relativePaths(a), (p) => p.length === 2),
+      await waitFor(
+        () => relativePaths(a),
+        (p) => p.length === 2,
+      ),
       ['sample.env', 'apps/api/.env.local'],
     );
   });

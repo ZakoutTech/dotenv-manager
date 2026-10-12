@@ -6,16 +6,7 @@
  */
 
 /** Default of the `dotenvManager.exclude` setting (keep in sync with package.json). */
-export const DEFAULT_EXCLUDES = [
-  '**/node_modules',
-  '**/.git',
-  '**/dist',
-  '**/out',
-  '**/build',
-  '**/.next',
-  '**/coverage',
-  '**/vendor',
-];
+export const DEFAULT_EXCLUDES = ['**/node_modules', '**/.git', '**/dist', '**/out', '**/build', '**/.next', '**/coverage', '**/vendor'];
 
 const normalize = (pattern: string): string => {
   const trimmed = pattern.trim().replace(/\/+$/, '');
@@ -47,7 +38,12 @@ export function globToRegExp(pattern: string): RegExp {
         out += `(?:${glob
           .slice(i + 1, close)
           .split(',')
-          .map((alt) => alt.replace(/[.+^$()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]'))
+          .map((alt) =>
+            alt
+              .replace(/[.+^$()|[\]\\]/g, '\\$&')
+              .replace(/\*/g, '[^/]*')
+              .replace(/\?/g, '[^/]'),
+          )
           .join('|')})`;
         i = close;
       }

@@ -8,9 +8,7 @@ export interface VariablePosition {
   index: number;
 }
 
-export type VariableDropTarget =
-  | { group: number; index: number; position: 'before' | 'after' }
-  | { group: number; end: true };
+export type VariableDropTarget = { group: number; index: number; position: 'before' | 'after' } | { group: number; end: true };
 
 export interface VariableMove {
   toGroup: number;

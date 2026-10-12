@@ -92,11 +92,7 @@ function insertionPoint(group: EnvGroup, toIndex: number): number {
  */
 function fixAdjacency(group: EnvGroup): void {
   const first = group.items[0];
-  if (
-    group.name !== null &&
-    first &&
-    ((first.type === 'entry' && first.comment.length > 0) || first.type === 'comment')
-  ) {
+  if (group.name !== null && first && ((first.type === 'entry' && first.comment.length > 0) || first.type === 'comment')) {
     group.items.unshift({ type: 'blank' });
   }
   for (let i = 1; i < group.items.length; i++) {

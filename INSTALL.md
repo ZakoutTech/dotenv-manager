@@ -61,7 +61,7 @@ If `cursor` isn't found, open the Command Palette in Cursor and run **Shell Comm
 
 ### If Cursor refuses to install it
 
-An error like *"Unable to install extension … as it is not compatible with VS Code '1.x.y'"* means your Cursor is built on a VS Code version older than 1.100. Check the version under **Cursor → About Cursor** (macOS) or **Help → About** (Windows/Linux); the line that says **VSCode Version** is the one that matters. Update Cursor to fix it.
+An error like _"Unable to install extension … as it is not compatible with VS Code '1.x.y'"_ means your Cursor is built on a VS Code version older than 1.100. Check the version under **Cursor → About Cursor** (macOS) or **Help → About** (Windows/Linux); the line that says **VSCode Version** is the one that matters. Update Cursor to fix it.
 
 ## 4. Check that it works
 
