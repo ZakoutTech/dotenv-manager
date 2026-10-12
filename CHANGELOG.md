@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.0.2
+
+### Patch Changes
+
+- b3fd0fe: .env files no longer open in Dotenv Manager by default when an older version or Settings Sync wrote `workbench.editorAssociations` back. Those entries are now removed on every start and whenever they reappear, so Dotenv Manager opens only through **Open with Dotenv Manager**.
+
 ## 0.0.1 — 2026-10-11
 
 Initial release.
